@@ -9,14 +9,17 @@
 name: CI and Publish
 
 on:
+  pull_request:
+    branches: [main]
   push:
-    branches:
-      - main
+    branches: [main]
 
 jobs:
   test-and-lint:
     name: Test & Lint
     runs-on: ubuntu-latest
+    # Use "test" environment for PRs (optional; mainly useful if you have env secrets/vars)
+    environment: test
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
@@ -31,9 +34,17 @@ jobs:
     name: Publish (npm + JSR)
     runs-on: ubuntu-latest
     needs: test-and-lint
+
+    # ✅ publish only on push to main (not on PR)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    # ✅ this activates GitHub Environment protections (approvals, env secrets)
+    environment: production
+
     permissions:
       contents: read
       id-token: write
+
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
@@ -43,3 +54,4 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: bun run scripts/publish.ts -- --force
+        

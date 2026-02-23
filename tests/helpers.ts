@@ -72,10 +72,41 @@ export async function createTempRepo(): Promise<string> {
     stderr: "pipe",
     env,
   });
+  const initStderr = new Response(p.stderr).text();
   await p.exited;
   if (p.exitCode !== 0) {
+    const stderr = (await initStderr).trim();
     await rm(dir, { recursive: true }).catch(() => {});
-    throw new Error("git init failed");
+    throw new Error(`git init failed: ${stderr || "(no stderr)"}`);
+  }
+
+  // Configure local identity so later test commits succeed in CI (no global git config required).
+  const setName = Bun.spawn(["git", "config", "user.name", "Test"], {
+    cwd: dir,
+    stdout: "pipe",
+    stderr: "pipe",
+    env,
+  });
+  const setNameStderr = new Response(setName.stderr).text();
+  await setName.exited;
+  if (setName.exitCode !== 0) {
+    const stderr = (await setNameStderr).trim();
+    await rm(dir, { recursive: true }).catch(() => {});
+    throw new Error(`git config user.name failed: ${stderr || "(no stderr)"}`);
+  }
+
+  const setEmail = Bun.spawn(["git", "config", "user.email", "test@test.local"], {
+    cwd: dir,
+    stdout: "pipe",
+    stderr: "pipe",
+    env,
+  });
+  const setEmailStderr = new Response(setEmail.stderr).text();
+  await setEmail.exited;
+  if (setEmail.exitCode !== 0) {
+    const stderr = (await setEmailStderr).trim();
+    await rm(dir, { recursive: true }).catch(() => {});
+    throw new Error(`git config user.email failed: ${stderr || "(no stderr)"}`);
   }
   await writeFile(join(dir, "README"), "initial\n", "utf-8");
   const add = Bun.spawn(["git", "add", "README"], {

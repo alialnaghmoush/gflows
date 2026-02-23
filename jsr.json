@@ -1,7 +1,8 @@
 {
   "name": "@alialnaghmoush/gflows",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "A lightweight CLI for consistent Git branching workflows (main + dev, feature/bugfix/chore/release/hotfix).",
+  "license": "MIT",
   "exports": {
     ".": "./src/index.ts",
     "./cli": "./src/cli.ts"
