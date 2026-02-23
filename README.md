@@ -40,29 +40,55 @@ git --version
 
 ## Installation
 
-**From the repository (development or link):**
+**As a dev dependency (recommended):**
+
+**npm**
 
 ```bash
-git clone https://github.com/alialnaghmoush/gflows.git
-cd gflows
-bun install
-bun link    # global `gflows` (or: npm link)
+npm install --save-dev gflows
 ```
 
-**Run without installing** (from repo root):
+**Bun**
 
 ```bash
-bun run gflows -- <command> ...
-# or
-bun run src/cli.ts -- <command> ...
+bun add --dev gflows
 ```
 
-**After linking**, use `gflows` from any Git repository:
+**JSR (npm / npx)**
 
 ```bash
-cd /path/to/your/repo
-gflows init
-gflows start feature my-feature
+npx jsr add --dev @alialnaghmoush/gflows
+```
+
+**JSR (Bun / bunx)**
+
+```bash
+bunx jsr add --dev @alialnaghmoush/gflows
+```
+
+**JSR (Deno)**
+
+```bash
+deno add --dev jsr:@alialnaghmoush/gflows
+```
+
+Available on:
+
+- [npm: gflows](https://www.npmjs.com/package/gflows)
+- [JSR: @alialnaghmoush/gflows](https://jsr.io/@alialnaghmoush/gflows)
+
+**Global install (optional):**
+
+**npm**
+
+```bash
+npm install --global gflows
+```
+
+**Bun**
+
+```bash
+bun add --global gflows
 ```
 
 ---
