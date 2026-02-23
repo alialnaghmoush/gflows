@@ -1,0 +1,38 @@
+{
+  "name": "gflows",
+  "version": "0.1.0",
+  "description": "A lightweight CLI for consistent Git branching workflows (main + dev, feature/bugfix/chore/release/hotfix).",
+  "type": "module",
+  "module": "src/index.ts",
+  "bin": {
+    "gflows": "src/cli.ts"
+  },
+  "scripts": {
+    "test": "bun test",
+    "lint": "tsc --noEmit",
+    "gflows": "bun run src/cli.ts",
+    "publish": "bun run scripts/publish.ts",
+    "publish:npm": "bun run scripts/publish.ts -- --npm-only",
+    "publish:jsr": "bun run scripts/publish.ts -- --jsr-only"
+  },
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "bun": ">=1.0.0"
+  },
+  "author": "Ali AlNaghmoush (https://github.com/alialnaghmoush)",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alialnaghmoush/gflows"
+  },
+  "dependencies": {
+    "@inquirer/prompts": "^8"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5"
+  }
+}

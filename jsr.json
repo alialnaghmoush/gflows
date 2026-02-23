@@ -1,0 +1,19 @@
+{
+  "name": "gflows",
+  "version": "0.1.0",
+  "exports": {
+    ".": "./src/index.ts",
+    "./cli": "./src/cli.ts"
+  },
+  "publish": {
+    "include": [
+      "src",
+      "README.md",
+      "LICENSE"
+    ],
+    "exclude": [
+      "tests",
+      "scripts"
+    ]
+  }
+}
