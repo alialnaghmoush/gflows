@@ -1,3 +1,5 @@
+#!/usr/bin/env bun
+
 /**
  * CLI entrypoint for gflows. Parses argv, resolves -C/path, dispatches to commands,
  * and ensures exit codes and unhandled rejections are handled.

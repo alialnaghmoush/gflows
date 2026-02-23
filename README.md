@@ -77,6 +77,11 @@ Available on:
 - [npm: gflows](https://www.npmjs.com/package/gflows)
 - [JSR: @alialnaghmoush/gflows](https://jsr.io/@alialnaghmoush/gflows)
 
+If installed as a local dev dependency, run via your package runner:
+
+- Bun: `bunx gflows ...` (or `bun gflows ...` when available in your Bun setup)
+- npm: `npx gflows ...`
+
 **Global install (optional):**
 
 **npm**
