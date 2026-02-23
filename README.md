@@ -542,6 +542,14 @@ bun run publish:all -- --force   # skip pre-publish checks (clean tree, branch m
 
 **Version sync:** The script reads `version` from **package.json** and writes it to **jsr.json** before publishing so the two registries never drift. Use **`gflows bump`** to change the version; the script does not bump for you.
 
+### JSR score (100%)
+
+To get a 100% score on [JSR](https://jsr.io/@alialnaghmoush/gflows/score):
+
+1. **Description** — Set in `jsr.json` (already added). If the score still shows 0/1, set the description in [package settings](https://jsr.io/@alialnaghmoush/gflows/settings) on JSR.
+2. **Runtime compatibility** — In [package settings](https://jsr.io/@alialnaghmoush/gflows/settings), open “Runtime compatibility” and mark at least **Bun** and **Node.js** (or others) as **Supported**.
+3. **Provenance** — The repo includes [`.github/workflows/publish.yml`](.github/workflows/publish.yml) (test, lint, then publish to npm and JSR). In JSR package settings, **link** the package to this GitHub repository. Add `NPM_TOKEN` in repo Secrets for npm. After that, pushes to `main` run CI and publish both registries; JSR records provenance.
+
 ---
 
 ## License

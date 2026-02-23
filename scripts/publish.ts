@@ -99,10 +99,12 @@ function syncVersion(): string {
     jsr = {
       name: pkg.name ?? "gflows",
       version,
+      description: pkg.description,
       exports: "./src/index.ts",
     };
   } else {
     jsr.version = version;
+    if (pkg.description !== undefined) jsr.description = pkg.description;
   }
   writeJsrJson(jsr);
   return version;
