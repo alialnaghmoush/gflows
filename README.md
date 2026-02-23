@@ -514,11 +514,11 @@ Publishing is done with the **internal script** `scripts/publish.ts`. It syncs t
 ### Commands
 
 ```bash
-bun run publish                  # publish to npm and JSR (same version)
-bun run publish -- --dry-run     # sync version only; print intended commands; no publish
-bun run publish -- --npm-only    # publish only to npm
-bun run publish -- --jsr-only    # publish only to JSR
-bun run publish -- --force       # skip pre-publish checks (clean tree, branch main)
+bun run publish:all              # publish to npm and JSR (same version)
+bun run publish:all -- --dry-run # sync version only; print intended commands; no publish
+bun run publish:npm              # publish only to npm
+bun run publish:jsr              # publish only to JSR
+bun run publish:all -- --force   # skip pre-publish checks (clean tree, branch main)
 ```
 
 ### Typical release workflow
@@ -532,8 +532,8 @@ bun run publish -- --force       # skip pre-publish checks (clean tree, branch m
    ```
 3. Run the publish script:
    ```bash
-   bun run publish -- --dry-run     # verify
-   bun run publish
+   bun run publish:all -- --dry-run # verify
+   bun run publish:all
    ```
 4. Optionally push main and tags:
    ```bash
