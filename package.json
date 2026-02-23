@@ -1,6 +1,6 @@
 {
   "name": "gflows",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A lightweight CLI for consistent Git branching workflows (main + dev, feature/bugfix/chore/release/hotfix).",
   "type": "module",
   "module": "src/index.ts",
