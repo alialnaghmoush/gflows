@@ -13,6 +13,7 @@ import {
   checkout,
   resolveRepoRoot,
 } from "../git.js";
+import { hint, success } from "../out.js";
 
 const BRANCH_TYPES: BranchType[] = [
   "feature",
@@ -63,7 +64,8 @@ export async function run(args: ParsedArgs): Promise<void> {
       verbose: args.verbose,
     });
     if (!quiet && !dryRun) {
-      console.error(`Switched to branch '${branchName}'.`);
+      success(`Switched to branch '${branchName}'.`);
+      hint("Use gflows list to see all workflow branches.");
     }
     return;
   }
@@ -101,6 +103,7 @@ export async function run(args: ParsedArgs): Promise<void> {
     verbose: args.verbose,
   });
   if (!quiet && !dryRun) {
-    console.error(`Switched to branch '${chosen}'.`);
+    success(`Switched to branch '${chosen}'.`);
+    hint("Use gflows list to see all workflow branches.");
   }
 }

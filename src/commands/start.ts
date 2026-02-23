@@ -8,6 +8,7 @@ import type { BranchType, ParsedArgs } from "../types.js";
 import { EXIT_USER, VERSION_REGEX } from "../constants.js";
 import { getPrefixForType, resolveConfig } from "../config.js";
 import { BranchNotFoundError, DirtyWorkingTreeError, InvalidVersionError } from "../errors.js";
+import { hint, success } from "../out.js";
 import {
   assertNoRebaseOrMerge,
   assertNotDetached,
@@ -122,7 +123,7 @@ export async function run(args: ParsedArgs): Promise<void> {
   await runGit(["checkout", "-b", fullBranchName, base], { cwd: repoRoot, ...opts });
 
   if (!args.quiet && !args.dryRun) {
-    console.error(`gflows: created and checked out branch '${fullBranchName}' from '${base}'.`);
+    success(`gflows: created and checked out branch '${fullBranchName}' from '${base}'.`);
   }
 
   const doPush = args.push && !args.noPush;
@@ -135,7 +136,11 @@ export async function run(args: ParsedArgs): Promise<void> {
       );
     }
     if (!args.quiet && !args.dryRun) {
-      console.error(`gflows: pushed '${fullBranchName}' to '${remote}'.`);
+      success(`gflows: pushed '${fullBranchName}' to '${remote}'.`);
     }
+  }
+
+  if (!args.quiet && !args.dryRun) {
+    hint(`When done, run gflows finish ${type} to merge into the target branch.`);
   }
 }

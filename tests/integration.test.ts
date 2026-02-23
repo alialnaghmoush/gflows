@@ -20,7 +20,7 @@ describe("integration: init and start/finish cycle", () => {
     dir = await createTempRepo();
     const r = await runGflows(dir, ["init"]);
     expect(r.exitCode).toBe(0);
-    expect(r.stderr).toContain("created branch 'dev'");
+    expect(r.stdout).toContain("created branch 'dev'");
 
     const list = Bun.spawn(["git", "branch", "--list"], {
       cwd: dir,
@@ -38,7 +38,7 @@ describe("integration: init and start/finish cycle", () => {
     await runGflows(dir, ["init"]);
     let r = await runGflows(dir, ["start", "feature", "my-feat"]);
     expect(r.exitCode).toBe(0);
-    expect(r.stderr).toContain("feature/my-feat");
+    expect(r.stdout).toContain("feature/my-feat");
 
     await writeFile(join(dir, "foo"), "hello", "utf-8");
     const add = Bun.spawn(["git", "add", "foo"], { cwd: dir, stdout: "pipe", stderr: "pipe" });
@@ -53,7 +53,7 @@ describe("integration: init and start/finish cycle", () => {
 
     r = await runGflows(dir, ["finish", "feature", "-y"]);
     expect(r.exitCode).toBe(0);
-    expect(r.stderr).toContain("finished");
+    expect(r.stdout).toContain("finished");
 
     const branch = Bun.spawn(["git", "rev-parse", "--abbrev-ref", "HEAD"], {
       cwd: dir,

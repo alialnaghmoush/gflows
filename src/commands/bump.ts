@@ -10,6 +10,7 @@ import type { ParsedArgs } from "../types.js";
 import type { BumpDirection, BumpType } from "../types.js";
 import { EXIT_OK, EXIT_USER } from "../constants.js";
 import { InvalidVersionError } from "../errors.js";
+import { hint, success } from "../out.js";
 
 const PACKAGE_JSON = "package.json";
 const JSR_JSON = "jsr.json";
@@ -195,8 +196,8 @@ export async function run(args: ParsedArgs): Promise<void> {
 
   if (dryRun) {
     if (!quiet) {
-      console.error(`Would bump version: ${oldVersion} → ${newVersion}`);
-      console.error(`Would update: ${filesToUpdate.join(", ")}`);
+      success(`Would bump version: ${oldVersion} → ${newVersion}`);
+      success(`Would update: ${filesToUpdate.join(", ")}`);
     }
     process.exit(EXIT_OK);
   }
@@ -205,9 +206,10 @@ export async function run(args: ParsedArgs): Promise<void> {
   const jsrUpdated = syncJsrVersion(cwd, newVersion);
 
   if (!quiet) {
-    console.error(`Bumped version: ${oldVersion} → ${newVersion}`);
+    success(`Bumped version: ${oldVersion} → ${newVersion}`);
     const updated = [PACKAGE_JSON];
     if (jsrUpdated) updated.push(JSR_JSON);
-    console.error(`Updated: ${updated.join(", ")}`);
+    success(`Updated: ${updated.join(", ")}`);
+    hint("Commit the change, then run gflows start release vX.Y.Z to release.");
   }
 }

@@ -13,6 +13,7 @@ import {
   revParse,
   runGit,
 } from "../git.js";
+import { banner, hint, success } from "../out.js";
 import type { ParsedArgs } from "../types.js";
 
 /**
@@ -34,6 +35,18 @@ export async function run(args: ParsedArgs): Promise<void> {
     },
     { verbose: args.verbose }
   );
+
+  if (!args.quiet) {
+    banner("gflows init", [
+      "Setting up main + dev workflow",
+      "",
+      `  main   ${config.main}`,
+      `  dev    ${config.dev}`,
+      `  remote ${config.remote}`,
+      "",
+      "→ Dev from main. Use --push to push.",
+    ]);
+  }
 
   const opts = {
     dryRun: args.dryRun,
@@ -59,7 +72,7 @@ export async function run(args: ParsedArgs): Promise<void> {
   if (!devExists) {
     await runGit(["branch", config.dev, config.main], { cwd: repoRoot, ...opts });
     if (!args.quiet && !args.dryRun) {
-      console.error(`gflows: created branch '${config.dev}' from '${config.main}'.`);
+      success(`gflows: created branch '${config.dev}' from '${config.main}'.`);
     }
   }
 
@@ -72,7 +85,7 @@ export async function run(args: ParsedArgs): Promise<void> {
       );
     }
     if (!args.quiet && !args.dryRun) {
-      console.error(`gflows: pushed '${config.dev}' to '${config.remote}'.`);
+      success(`gflows: pushed '${config.dev}' to '${config.remote}'.`);
     }
   }
 
@@ -84,7 +97,11 @@ export async function run(args: ParsedArgs): Promise<void> {
       ...(args.remote !== undefined && { remote: args.remote }),
     });
     if (!args.quiet) {
-      console.error("gflows: updated .gflows.json with provided options.");
+      success("gflows: updated .gflows.json with provided options.");
     }
+  }
+
+  if (!args.quiet) {
+    hint("Run gflows start feature <name> to create a workflow branch.");
   }
 }

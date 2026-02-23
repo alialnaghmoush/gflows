@@ -50,6 +50,11 @@ Finish: --no-ff         Always create merge commit; -D/--delete, -N/--no-delete;
 List:   -r, --include-remote   Include remote-tracking branches
 
 Exit codes: 0 success, 1 usage/validation, 2 Git or system error.
+
+Hints:
+  • gflows init then gflows start feature <name> — set up and create first branch
+  • gflows finish <type> — merge current workflow branch (use -B <name> to specify branch)
+  • gflows list -r — include remote branches; gflows status — show current branch flow
 `;
   console.log(out.trim());
 }

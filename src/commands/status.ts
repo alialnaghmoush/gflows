@@ -18,6 +18,7 @@ import {
   getCurrentBranch,
   resolveRepoRoot,
 } from "../git.js";
+import { hint } from "../out.js";
 
 const BRANCH_TYPES: BranchType[] = [
   "feature",
@@ -137,5 +138,6 @@ export async function run(args: ParsedArgs): Promise<void> {
 
   if (!quiet) {
     console.log(`Ahead/behind: ${ahead} ahead, ${behind} behind`);
+    hint(`Run gflows finish ${classification} to merge into ${mergeTargetDisplay}.`);
   }
 }

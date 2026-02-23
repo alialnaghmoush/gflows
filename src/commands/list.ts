@@ -11,6 +11,7 @@ import type { ResolvedConfig } from "../types.js";
 import { resolveConfig } from "../config.js";
 import { NotRepoError } from "../errors.js";
 import { branchList, fetch, resolveRepoRoot } from "../git.js";
+import { hint } from "../out.js";
 
 const BRANCH_TYPES: BranchType[] = [
   "feature",
@@ -89,5 +90,8 @@ export async function run(args: ParsedArgs): Promise<void> {
 
   if (!quiet && sorted.length === 0) {
     console.error("No workflow branches found.");
+    hint("Run gflows start <type> <name> to create a workflow branch.");
+  } else if (!quiet && sorted.length > 0) {
+    hint("Use gflows switch <branch> to switch to a branch.");
   }
 }

@@ -26,6 +26,7 @@ import {
   tag,
   tagExists,
 } from "../git.js";
+import { hint, success } from "../out.js";
 
 /** Normalizes version to vX.Y.Z for tag name. */
 function normalizeTagVersion(version: string): string {
@@ -206,7 +207,7 @@ export async function run(args: ParsedArgs): Promise<void> {
           tagMessage: args.tagMessage,
         });
         if (!args.quiet && !args.dryRun) {
-          console.error(`gflows: created tag '${tagName}'.`);
+          success(`gflows: created tag '${tagName}'.`);
         }
       }
 
@@ -237,7 +238,7 @@ export async function run(args: ParsedArgs): Promise<void> {
   if (shouldDelete && !opts.dryRun) {
     await deleteBranch(repoRoot, branchToFinish, opts);
     if (!args.quiet) {
-      console.error(`gflows: deleted branch '${branchToFinish}'.`);
+      success(`gflows: deleted branch '${branchToFinish}'.`);
     }
   }
 
@@ -265,11 +266,12 @@ export async function run(args: ParsedArgs): Promise<void> {
       process.exit(2);
     }
     if (!args.quiet && !args.dryRun) {
-      console.error(`gflows: pushed to ${remote}.`);
+      success(`gflows: pushed to ${remote}.`);
     }
   }
 
   if (!args.quiet && !args.dryRun) {
-    console.error(`gflows: finished '${branchToFinish}' into ${meta.mergeTarget}.`);
+    success(`gflows: finished '${branchToFinish}' into ${meta.mergeTarget}.`);
+    hint("Run gflows start <type> <name> to create a new workflow branch.");
   }
 }

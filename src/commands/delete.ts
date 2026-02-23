@@ -13,6 +13,7 @@ import {
   deleteBranch,
   resolveRepoRoot,
 } from "../git.js";
+import { hint, success } from "../out.js";
 
 const BRANCH_TYPES: BranchType[] = [
   "feature",
@@ -75,8 +76,11 @@ export async function run(args: ParsedArgs): Promise<void> {
         verbose: args.verbose,
       });
       if (!quiet && !dryRun) {
-        console.error(`Deleted branch '${branch}'.`);
+        success(`Deleted branch '${branch}'.`);
       }
+    }
+    if (!quiet && !dryRun) {
+      hint("Use gflows list to see remaining workflow branches.");
     }
     return;
   }
@@ -131,7 +135,10 @@ export async function run(args: ParsedArgs): Promise<void> {
       verbose: args.verbose,
     });
     if (!quiet && !dryRun) {
-      console.error(`Deleted branch '${branch}'.`);
+      success(`Deleted branch '${branch}'.`);
     }
+  }
+  if (!quiet && !dryRun && chosen.length > 0) {
+    hint("Use gflows list to see remaining workflow branches.");
   }
 }
