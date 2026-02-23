@@ -215,7 +215,8 @@ async function main(): Promise<void> {
   }
 
   if (doJsr) {
-    const ok = await run(["bunx", "jsr", "publish"], { cwd: REPO_ROOT });
+    // We just wrote jsr.json in syncVersion(), so tree is dirty; JSR requires --allow-dirty.
+    const ok = await run(["bunx", "jsr", "publish", "--allow-dirty"], { cwd: REPO_ROOT });
     if (!ok) {
       console.error("[publish] jsr publish failed.");
       process.exit(2);
