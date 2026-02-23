@@ -1,19 +1,50 @@
 /**
- * Bump command: bump or rollback root package version (patch/minor/major).
+ * Bump command: bump or rollback package version (patch/minor/major).
+ * Supports monorepos: discovers all package.json and jsr.json under cwd and bumps them to the same version.
  * Keeps package.json and jsr.json in sync; no git operations.
  * @module commands/bump
  */
 
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
-import type { ParsedArgs } from "../types.js";
-import type { BumpDirection, BumpType } from "../types.js";
+import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { join, relative } from "node:path";
 import { EXIT_OK, EXIT_USER } from "../constants.js";
 import { InvalidVersionError } from "../errors.js";
 import { hint, success } from "../out.js";
+import type { BumpDirection, BumpType, ParsedArgs } from "../types.js";
 
 const PACKAGE_JSON = "package.json";
 const JSR_JSON = "jsr.json";
+
+/** Directory names to skip when discovering package roots (monorepo). */
+const SKIP_DIRS = new Set(["node_modules", ".git"]);
+
+/**
+ * Recursively finds all directories under `root` that contain a package.json.
+ * Skips node_modules and .git.
+ */
+function findPackageRoots(root: string): string[] {
+  const acc: string[] = [];
+  if (!existsSync(root) || !statSync(root, { throwIfNoEntry: false })?.isDirectory()) {
+    return acc;
+  }
+  if (existsSync(join(root, PACKAGE_JSON))) {
+    acc.push(root);
+  }
+  let entries: Array<{ isDirectory(): boolean; name: string }>;
+  try {
+    entries = readdirSync(root, { withFileTypes: true }) as Array<{
+      isDirectory(): boolean;
+      name: string;
+    }>;
+  } catch {
+    return acc;
+  }
+  for (const e of entries) {
+    if (!e.isDirectory() || SKIP_DIRS.has(e.name)) continue;
+    acc.push(...findPackageRoots(join(root, e.name)));
+  }
+  return acc;
+}
 
 /** Semver triplet. */
 interface Semver {
@@ -30,18 +61,16 @@ function parseVersion(version: string): Semver {
   const trimmed = version.trim();
   const normalized = trimmed.startsWith("v") ? trimmed.slice(1) : trimmed;
   const parts = normalized.split(".");
-  if (
-    parts.length !== 3 ||
-    parts.some((p) => !/^\d+$/.test(p))
-  ) {
+  if (parts.length !== 3 || parts.some((p) => !/^\d+$/.test(p))) {
     throw new InvalidVersionError(
-      `Invalid version '${version}'. Expected format: X.Y.Z or vX.Y.Z (e.g. 1.2.3 or v1.2.3).`
+      `Invalid version '${version}'. Expected format: X.Y.Z or vX.Y.Z (e.g. 1.2.3 or v1.2.3).`,
     );
   }
+  const [p0, p1, p2] = parts;
   return {
-    major: parseInt(parts[0]!, 10),
-    minor: parseInt(parts[1]!, 10),
-    patch: parseInt(parts[2]!, 10),
+    major: parseInt(p0 ?? "0", 10),
+    minor: parseInt(p1 ?? "0", 10),
+    patch: parseInt(p2 ?? "0", 10),
   };
 }
 
@@ -103,7 +132,7 @@ function readPackageVersion(dir: string): { raw: string; semver: Semver } {
   const path = join(dir, PACKAGE_JSON);
   if (!existsSync(path)) {
     throw new InvalidVersionError(
-      `No package.json found at ${path}. Run from project root or use -C <dir>.`
+      `No package.json found at ${path}. Run from project root or use -C <dir>.`,
     );
   }
   const raw = readFileSync(path, "utf-8");
@@ -111,7 +140,7 @@ function readPackageVersion(dir: string): { raw: string; semver: Semver } {
   const version = data.version;
   if (typeof version !== "string" || version.trim() === "") {
     throw new InvalidVersionError(
-      "package.json has no valid 'version' field. Add a \"version\" field (e.g. \"0.0.0\") to package.json."
+      'package.json has no valid \'version\' field. Add a "version" field (e.g. "0.0.0") to package.json.',
     );
   }
   const semver = parseVersion(version);
@@ -127,7 +156,7 @@ function writePackageVersion(dir: string, newVersion: string): void {
   const raw = readFileSync(path, "utf-8");
   const data = JSON.parse(raw) as Record<string, unknown>;
   data.version = newVersion;
-  writeFileSync(path, JSON.stringify(data, null, 2) + "\n", "utf-8");
+  writeFileSync(path, `${JSON.stringify(data, null, 2)}\n`, "utf-8");
 }
 
 /**
@@ -139,7 +168,7 @@ function syncJsrVersion(dir: string, newVersion: string): boolean {
   const raw = readFileSync(path, "utf-8");
   const data = JSON.parse(raw) as Record<string, unknown>;
   data.version = newVersion;
-  writeFileSync(path, JSON.stringify(data, null, 2) + "\n", "utf-8");
+  writeFileSync(path, `${JSON.stringify(data, null, 2)}\n`, "utf-8");
   return true;
 }
 
@@ -154,15 +183,14 @@ export async function run(args: ParsedArgs): Promise<void> {
   let direction: BumpDirection;
   let type: BumpType;
 
-  const isTTY =
-    typeof process.stdin.isTTY === "boolean" && process.stdin.isTTY;
+  const isTTY = typeof process.stdin.isTTY === "boolean" && process.stdin.isTTY;
 
   if (bumpDirection && bumpType) {
     direction = bumpDirection;
     type = bumpType;
   } else if (!isTTY) {
     console.error(
-      "gflows bump: when not in a TTY, both direction and type are required. Example: gflows bump up patch"
+      "gflows bump: when not in a TTY, both direction and type are required. Example: gflows bump up patch",
     );
     process.exit(EXIT_USER);
   } else {
@@ -184,14 +212,33 @@ export async function run(args: ParsedArgs): Promise<void> {
     });
   }
 
-  const { raw: oldVersion, semver } = readPackageVersion(cwd);
-  const newSemver =
-    direction === "up" ? bumpUp(semver, type) : bumpDown(semver, type);
+  let roots = findPackageRoots(cwd);
+  roots = [...roots].sort((a, b) => {
+    if (a === cwd && b !== cwd) return -1;
+    if (a !== cwd && b === cwd) return 1;
+    return a.localeCompare(b);
+  });
+  if (roots.length === 0) {
+    throw new InvalidVersionError(
+      `No package.json found under ${cwd}. Run from project root or use -C <dir>.`,
+    );
+  }
+  const primaryRoot = roots[0];
+  if (primaryRoot === undefined) {
+    throw new InvalidVersionError(
+      `No package.json found under ${cwd}. Run from project root or use -C <dir>.`,
+    );
+  }
+  const { raw: oldVersion, semver } = readPackageVersion(primaryRoot);
+  const newSemver = direction === "up" ? bumpUp(semver, type) : bumpDown(semver, type);
   const newVersion = formatVersion(newSemver);
 
-  const filesToUpdate: string[] = [PACKAGE_JSON];
-  if (existsSync(join(cwd, JSR_JSON))) {
-    filesToUpdate.push(JSR_JSON);
+  const filesToUpdate: string[] = [];
+  for (const dir of roots) {
+    filesToUpdate.push(relative(cwd, join(dir, PACKAGE_JSON)) || PACKAGE_JSON);
+    if (existsSync(join(dir, JSR_JSON))) {
+      filesToUpdate.push(relative(cwd, join(dir, JSR_JSON)) || JSR_JSON);
+    }
   }
 
   if (dryRun) {
@@ -202,15 +249,18 @@ export async function run(args: ParsedArgs): Promise<void> {
     process.exit(EXIT_OK);
   }
 
-  writePackageVersion(cwd, newVersion);
-  const jsrUpdated = syncJsrVersion(cwd, newVersion);
+  const updated: string[] = [];
+  for (const dir of roots) {
+    writePackageVersion(dir, newVersion);
+    updated.push(relative(cwd, join(dir, PACKAGE_JSON)) || PACKAGE_JSON);
+    if (syncJsrVersion(dir, newVersion)) {
+      updated.push(relative(cwd, join(dir, JSR_JSON)) || JSR_JSON);
+    }
+  }
 
   if (!quiet) {
     success(`Bumped version: ${oldVersion} → ${newVersion}`);
-    const updated = [PACKAGE_JSON];
-    if (jsrUpdated) updated.push(JSR_JSON);
     success(`Updated: ${updated.join(", ")}`);
-    // Hint: suggest next step — commit and start release branch
     hint("Commit the change, then run gflows start release vX.Y.Z to release.");
   }
 }

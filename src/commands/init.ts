@@ -6,13 +6,7 @@
 
 import { resolveConfig, writeConfigFile } from "../config.js";
 import { BranchNotFoundError, NotRepoError } from "../errors.js";
-import {
-  branchList,
-  push,
-  resolveRepoRoot,
-  revParse,
-  runGit,
-} from "../git.js";
+import { branchList, push, resolveRepoRoot, revParse, runGit } from "../git.js";
 import { banner, hint, success } from "../out.js";
 import type { ParsedArgs } from "../types.js";
 
@@ -33,7 +27,7 @@ export async function run(args: ParsedArgs): Promise<void> {
       dev: args.dev,
       remote: args.remote,
     },
-    { verbose: args.verbose }
+    { verbose: args.verbose },
   );
 
   if (!args.quiet) {
@@ -44,7 +38,7 @@ export async function run(args: ParsedArgs): Promise<void> {
       `  dev    ${config.dev}`,
       `  remote ${config.remote}`,
       "",
-      "→ Dev from main. Use --push to push.",
+      "→ Dev from main. Use --no-push to skip pushing.",
     ]);
   }
 
@@ -60,7 +54,7 @@ export async function run(args: ParsedArgs): Promise<void> {
     if (err instanceof NotRepoError) throw err;
     if (err instanceof BranchNotFoundError) {
       throw new BranchNotFoundError(
-        `Main branch '${config.main}' does not exist. Create an initial commit and the main branch first.`
+        `Main branch '${config.main}' does not exist. Create an initial commit and the main branch first.`,
       );
     }
     throw err;
@@ -76,12 +70,12 @@ export async function run(args: ParsedArgs): Promise<void> {
     }
   }
 
-  const doPush = args.push && !args.noPush;
+  const doPush = !args.noPush;
   if (doPush) {
     const pushCode = await push(repoRoot, config.remote, [config.dev], false, opts);
     if (pushCode !== 0) {
       throw new Error(
-        `Push failed. Local branch '${config.dev}' was created. Retry with \`git push ${config.remote} ${config.dev}\` or \`gflows init --push\`.`
+        `Push failed. Local branch '${config.dev}' was created. Retry with \`git push ${config.remote} ${config.dev}\` or \`gflows init\`.`,
       );
     }
     if (!args.quiet && !args.dryRun) {
@@ -89,7 +83,8 @@ export async function run(args: ParsedArgs): Promise<void> {
     }
   }
 
-  const hasConfigFlags = args.main !== undefined || args.dev !== undefined || args.remote !== undefined;
+  const hasConfigFlags =
+    args.main !== undefined || args.dev !== undefined || args.remote !== undefined;
   if (!args.dryRun && hasConfigFlags) {
     writeConfigFile(repoRoot, {
       ...(args.main !== undefined && { main: args.main }),

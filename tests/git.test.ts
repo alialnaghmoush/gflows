@@ -3,8 +3,8 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { validateBranchName } from "../src/git.ts";
 import { InvalidBranchNameError } from "../src/errors.ts";
+import { validateBranchName } from "../src/git.ts";
 
 describe("validateBranchName", () => {
   test("accepts valid names", () => {

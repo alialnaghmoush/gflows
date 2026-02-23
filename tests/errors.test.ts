@@ -3,20 +3,20 @@
  */
 
 import { describe, expect, test } from "bun:test";
+import { EXIT_GIT, EXIT_USER } from "../src/constants.ts";
 import {
-  GflowsError,
-  NotRepoError,
   BranchNotFoundError,
-  DirtyWorkingTreeError,
-  DetachedHeadError,
-  RebaseMergeInProgressError,
-  MergeConflictError,
-  InvalidVersionError,
-  InvalidBranchNameError,
   CannotDeleteMainOrDevError,
+  DetachedHeadError,
+  DirtyWorkingTreeError,
   exitCodeForError,
+  GflowsError,
+  InvalidBranchNameError,
+  InvalidVersionError,
+  MergeConflictError,
+  NotRepoError,
+  RebaseMergeInProgressError,
 } from "../src/errors.ts";
-import { EXIT_USER, EXIT_GIT } from "../src/constants.ts";
 
 describe("GflowsError", () => {
   test("sets message and exitCode", () => {

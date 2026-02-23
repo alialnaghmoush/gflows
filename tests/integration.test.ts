@@ -3,11 +3,11 @@
  * Covers happy path (init, start, finish), error paths (not a repo, dirty tree, finish on main, tag exists, merge conflict), and non-TTY behavior.
  */
 
-import { describe, expect, test, beforeEach, afterEach } from "bun:test";
-import { mkdir, writeFile, rm } from "node:fs/promises";
-import { join } from "node:path";
+import { afterEach, describe, expect, test } from "bun:test";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { runGflows, createTempRepo } from "./helpers.ts";
+import { join } from "node:path";
+import { createTempRepo, runGflows } from "./helpers.ts";
 
 describe("integration: init and start/finish cycle", () => {
   let dir: string;
@@ -18,7 +18,7 @@ describe("integration: init and start/finish cycle", () => {
 
   test("init creates dev from main", async () => {
     dir = await createTempRepo();
-    const r = await runGflows(dir, ["init"]);
+    const r = await runGflows(dir, ["init", "--no-push"]);
     expect(r.exitCode).toBe(0);
     expect(r.stdout).toContain("created branch 'dev'");
 
@@ -35,7 +35,7 @@ describe("integration: init and start/finish cycle", () => {
 
   test("start feature and finish merges into dev", async () => {
     dir = await createTempRepo();
-    await runGflows(dir, ["init"]);
+    await runGflows(dir, ["init", "--no-push"]);
     let r = await runGflows(dir, ["start", "feature", "my-feat"]);
     expect(r.exitCode).toBe(0);
     expect(r.stdout).toContain("feature/my-feat");
@@ -76,14 +76,14 @@ describe("integration: error paths", () => {
   test("not a git repo → exit 2 and message", async () => {
     dir = join(tmpdir(), `gflows-not-repo-${Date.now()}`);
     await mkdir(dir, { recursive: true });
-    const r = await runGflows(dir, ["init"]);
+    const r = await runGflows(dir, ["init", "--no-push"]);
     expect(r.exitCode).toBe(2);
     expect(r.stderr).toMatch(/not a git repository/i);
   });
 
   test("start with dirty tree (no --force) → exit 2", async () => {
     dir = await createTempRepo();
-    await runGflows(dir, ["init"]);
+    await runGflows(dir, ["init", "--no-push"]);
     await writeFile(join(dir, "dirty"), "x", "utf-8");
     const r = await runGflows(dir, ["start", "feature", "x"]);
     expect(r.exitCode).toBe(2);
@@ -92,7 +92,7 @@ describe("integration: error paths", () => {
 
   test("start with invalid version → exit 1", async () => {
     dir = await createTempRepo();
-    await runGflows(dir, ["init"]);
+    await runGflows(dir, ["init", "--no-push"]);
     const r = await runGflows(dir, ["start", "release", "invalid"]);
     expect(r.exitCode).toBe(1);
     expect(r.stderr).toMatch(/invalid version|vX\.Y\.Z/i);
@@ -100,7 +100,7 @@ describe("integration: error paths", () => {
 
   test("finish on main → exit 2", async () => {
     dir = await createTempRepo();
-    await runGflows(dir, ["init"]);
+    await runGflows(dir, ["init", "--no-push"]);
     const r = await runGflows(dir, ["finish", "-B", "main"]);
     expect(r.exitCode).toBe(2);
     expect(r.stderr).toMatch(/long-lived|cannot finish/i);
@@ -108,7 +108,7 @@ describe("integration: error paths", () => {
 
   test("finish on dev → exit 2", async () => {
     dir = await createTempRepo();
-    await runGflows(dir, ["init"]);
+    await runGflows(dir, ["init", "--no-push"]);
     const r = await runGflows(dir, ["finish", "-B", "dev"]);
     expect(r.exitCode).toBe(2);
     expect(r.stderr).toMatch(/long-lived|cannot finish/i);
@@ -116,7 +116,7 @@ describe("integration: error paths", () => {
 
   test("delete main → exit 2", async () => {
     dir = await createTempRepo();
-    await runGflows(dir, ["init"]);
+    await runGflows(dir, ["init", "--no-push"]);
     const r = await runGflows(dir, ["delete", "main"]);
     expect(r.exitCode).toBe(2);
     expect(r.stderr).toMatch(/cannot delete|long-lived/i);
@@ -124,14 +124,16 @@ describe("integration: error paths", () => {
 
   test("tag already exists on finish release → exit 2", async () => {
     dir = await createTempRepo();
-    await runGflows(dir, ["init"]);
+    await runGflows(dir, ["init", "--no-push"]);
     await runGflows(dir, ["start", "release", "v1.0.0"]);
     await runGflows(dir, ["finish", "release", "-y", "-T"]);
     const tag = Bun.spawn(["git", "tag", "v1.0.0"], { cwd: dir, stdout: "pipe", stderr: "pipe" });
     await tag.exited;
     if (tag.exitCode !== 0) {
-      await Bun.spawn(["git", "checkout", "main"], { cwd: dir, stdout: "pipe", stderr: "pipe" }).exited;
-      await Bun.spawn(["git", "tag", "v1.0.0"], { cwd: dir, stdout: "pipe", stderr: "pipe" }).exited;
+      await Bun.spawn(["git", "checkout", "main"], { cwd: dir, stdout: "pipe", stderr: "pipe" })
+        .exited;
+      await Bun.spawn(["git", "tag", "v1.0.0"], { cwd: dir, stdout: "pipe", stderr: "pipe" })
+        .exited;
     }
     await runGflows(dir, ["start", "release", "v1.0.0"]);
     const r = await runGflows(dir, ["finish", "release", "-B", "release/v1.0.0", "-y"]);
@@ -148,10 +150,15 @@ describe("integration: error paths", () => {
       GIT_COMMITTER_EMAIL: "test@test.local",
     };
     dir = await createTempRepo();
-    await runGflows(dir, ["init"]);
+    await runGflows(dir, ["init", "--no-push"]);
     await runGflows(dir, ["start", "feature", "conflict-feat"]);
     await writeFile(join(dir, "file"), "on-feature", "utf-8");
-    await Bun.spawn(["git", "add", "file"], { cwd: dir, stdout: "pipe", stderr: "pipe", env: gitEnv }).exited;
+    await Bun.spawn(["git", "add", "file"], {
+      cwd: dir,
+      stdout: "pipe",
+      stderr: "pipe",
+      env: gitEnv,
+    }).exited;
     await Bun.spawn(["git", "commit", "-m", "feature change"], {
       cwd: dir,
       stdout: "pipe",
@@ -161,7 +168,12 @@ describe("integration: error paths", () => {
 
     await runGflows(dir, ["switch", "dev"]);
     await writeFile(join(dir, "file"), "on-dev", "utf-8");
-    await Bun.spawn(["git", "add", "file"], { cwd: dir, stdout: "pipe", stderr: "pipe", env: gitEnv }).exited;
+    await Bun.spawn(["git", "add", "file"], {
+      cwd: dir,
+      stdout: "pipe",
+      stderr: "pipe",
+      env: gitEnv,
+    }).exited;
     await Bun.spawn(["git", "commit", "-m", "dev change"], {
       cwd: dir,
       stdout: "pipe",
@@ -185,7 +197,7 @@ describe("integration: non-TTY behavior", () => {
 
   test("start without type/name (non-TTY) → exit 1", async () => {
     dir = await createTempRepo();
-    await runGflows(dir, ["init"]);
+    await runGflows(dir, ["init", "--no-push"]);
     const r = await runGflows(dir, ["start"]);
     expect(r.exitCode).toBe(1);
     expect(r.stderr).toMatch(/requires type and name|usage/i);
@@ -214,7 +226,9 @@ describe("integration: completion", () => {
     expect(r.exitCode).toBe(0);
     expect(r.stdout).toContain("# Bash completion");
     expect(r.stdout).toContain("complete -F _gflows");
-    expect(r.stdout).toContain("init start finish switch delete list bump completion status help version");
+    expect(r.stdout).toContain(
+      "init start finish switch delete list bump completion status help version",
+    );
   });
 
   test("completion zsh prints script with _gflows_list_branches", async () => {
@@ -245,7 +259,7 @@ describe("integration: list and status", () => {
 
   test("list shows workflow branches", async () => {
     dir = await createTempRepo();
-    await runGflows(dir, ["init"]);
+    await runGflows(dir, ["init", "--no-push"]);
     await runGflows(dir, ["start", "feature", "listed"]);
     const r = await runGflows(dir, ["list"]);
     expect(r.exitCode).toBe(0);
@@ -254,7 +268,7 @@ describe("integration: list and status", () => {
 
   test("status on feature branch shows type and target", async () => {
     dir = await createTempRepo();
-    await runGflows(dir, ["init"]);
+    await runGflows(dir, ["init", "--no-push"]);
     await runGflows(dir, ["start", "feature", "st"]);
     const r = await runGflows(dir, ["status"]);
     expect(r.exitCode).toBe(0);
@@ -263,7 +277,7 @@ describe("integration: list and status", () => {
 
   test("list with -r/--include-remote exits 0 and shows local branches", async () => {
     dir = await createTempRepo();
-    await runGflows(dir, ["init"]);
+    await runGflows(dir, ["init", "--no-push"]);
     await runGflows(dir, ["start", "feature", "local-only"]);
     const r = await runGflows(dir, ["list", "-r"]);
     expect(r.exitCode).toBe(0);
@@ -280,7 +294,7 @@ describe("integration: empty branch list and non-TTY", () => {
 
   test("switch with no branch name (non-TTY) → exit 1 and message", async () => {
     dir = await createTempRepo();
-    await runGflows(dir, ["init"]);
+    await runGflows(dir, ["init", "--no-push"]);
     const r = await runGflows(dir, ["switch"]);
     expect(r.exitCode).toBe(1);
     expect(r.stderr).toMatch(/no branch name|not a TTY|Pass a branch name/i);
@@ -288,7 +302,7 @@ describe("integration: empty branch list and non-TTY", () => {
 
   test("delete with no branch names (non-TTY) → exit 1 and message", async () => {
     dir = await createTempRepo();
-    await runGflows(dir, ["init"]);
+    await runGflows(dir, ["init", "--no-push"]);
     const r = await runGflows(dir, ["delete"]);
     expect(r.exitCode).toBe(1);
     expect(r.stderr).toMatch(/no branch name|not a TTY|Pass branch name/i);

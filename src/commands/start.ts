@@ -4,11 +4,9 @@
  * @module commands/start
  */
 
-import type { BranchType, ParsedArgs } from "../types.js";
-import { EXIT_USER, VERSION_REGEX } from "../constants.js";
 import { getPrefixForType, resolveConfig } from "../config.js";
+import { EXIT_USER, VERSION_REGEX } from "../constants.js";
 import { BranchNotFoundError, DirtyWorkingTreeError, InvalidVersionError } from "../errors.js";
-import { hint, success } from "../out.js";
 import {
   assertNoRebaseOrMerge,
   assertNotDetached,
@@ -21,16 +19,13 @@ import {
   runGit,
   validateBranchName,
 } from "../git.js";
+import { hint, success } from "../out.js";
+import type { BranchType, ParsedArgs } from "../types.js";
 
 /**
  * Returns the base branch name for the given type and fromMain flag (main vs dev).
  */
-function getBaseBranch(
-  type: BranchType,
-  fromMain: boolean,
-  main: string,
-  dev: string
-): string {
+function getBaseBranch(type: BranchType, fromMain: boolean, main: string, dev: string): string {
   if (type === "hotfix") return main;
   if (type === "bugfix" && fromMain) return main;
   return dev;
@@ -45,7 +40,9 @@ function getBaseBranch(
  */
 export async function run(args: ParsedArgs): Promise<void> {
   if (!args.type || args.name === undefined || args.name === "") {
-    console.error("gflows start: requires type and name (e.g. gflows start feature my-feat). Use 'gflows help' for usage.");
+    console.error(
+      "gflows start: requires type and name (e.g. gflows start feature my-feat). Use 'gflows help' for usage.",
+    );
     process.exit(EXIT_USER);
   }
 
@@ -55,7 +52,7 @@ export async function run(args: ParsedArgs): Promise<void> {
   const config = resolveConfig(
     repoRoot,
     { main: args.main, dev: args.dev, remote: args.remote },
-    { verbose: args.verbose }
+    { verbose: args.verbose },
   );
 
   const opts = {
@@ -79,7 +76,7 @@ export async function run(args: ParsedArgs): Promise<void> {
   if (type === "release" || type === "hotfix") {
     if (!VERSION_REGEX.test(name)) {
       throw new InvalidVersionError(
-        `Invalid version '${name}'. Use format vX.Y.Z or X.Y.Z (e.g. v1.2.0).`
+        `Invalid version '${name}'. Use format vX.Y.Z or X.Y.Z (e.g. v1.2.0).`,
       );
     }
   } else {
@@ -89,10 +86,10 @@ export async function run(args: ParsedArgs): Promise<void> {
   const base = getBaseBranch(type, args.fromMain, config.main, config.dev);
 
   // Ensure base exists (local or create from remote after fetch)
-  let baseExists = false;
+  let _baseExists = false;
   try {
     await revParse(repoRoot, base, [], { dryRun: false, verbose: opts.verbose });
-    baseExists = true;
+    _baseExists = true;
   } catch {
     // Fetch and try remote ref
     await fetch(repoRoot, config.remote, opts);
@@ -102,10 +99,10 @@ export async function run(args: ParsedArgs): Promise<void> {
       if (!opts.dryRun) {
         await runGit(["branch", base, remoteRef], { cwd: repoRoot, ...opts, dryRun: false });
       }
-      baseExists = true;
+      _baseExists = true;
     } catch {
       throw new BranchNotFoundError(
-        `Base branch '${base}' not found locally or on ${config.remote}. Create it or push it first.`
+        `Base branch '${base}' not found locally or on ${config.remote}. Create it or push it first.`,
       );
     }
   }
@@ -116,7 +113,7 @@ export async function run(args: ParsedArgs): Promise<void> {
   const branches = await branchList(repoRoot, { ...opts, dryRun: false });
   if (branches.includes(fullBranchName)) {
     throw new BranchNotFoundError(
-      `Branch '${fullBranchName}' already exists. Use a different name or switch to it.`
+      `Branch '${fullBranchName}' already exists. Use a different name or switch to it.`,
     );
   }
 
@@ -132,7 +129,7 @@ export async function run(args: ParsedArgs): Promise<void> {
     const pushCode = await push(repoRoot, remote, [fullBranchName], false, opts);
     if (pushCode !== 0) {
       throw new Error(
-        `Push failed. Local branch '${fullBranchName}' was created. Retry with \`git push ${remote} ${fullBranchName}\` or \`gflows start ... --push\`.`
+        `Push failed. Local branch '${fullBranchName}' was created. Retry with \`git push ${remote} ${fullBranchName}\` or \`gflows start ... --push\`.`,
       );
     }
     if (!args.quiet && !args.dryRun) {

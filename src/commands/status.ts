@@ -6,28 +6,13 @@
  * @module commands/status
  */
 
-import type { BranchType, ParsedArgs } from "../types.js";
-import type { ResolvedConfig } from "../types.js";
-import {
-  getBranchTypeMeta,
-  resolveConfig,
-} from "../config.js";
+import { getBranchTypeMeta, resolveConfig } from "../config.js";
 import { NotRepoError } from "../errors.js";
-import {
-  getAheadBehind,
-  getCurrentBranch,
-  resolveRepoRoot,
-} from "../git.js";
+import { getAheadBehind, getCurrentBranch, resolveRepoRoot } from "../git.js";
 import { hint } from "../out.js";
+import type { BranchType, ParsedArgs, ResolvedConfig } from "../types.js";
 
-const BRANCH_TYPES: BranchType[] = [
-  "feature",
-  "bugfix",
-  "chore",
-  "release",
-  "hotfix",
-  "spike",
-];
+const BRANCH_TYPES: BranchType[] = ["feature", "bugfix", "chore", "release", "hotfix", "spike"];
 
 /**
  * Classifies a branch name into a workflow type, "main", "dev", or null (unknown).
@@ -35,7 +20,7 @@ const BRANCH_TYPES: BranchType[] = [
  */
 function classifyBranch(
   branchName: string,
-  config: ResolvedConfig
+  config: ResolvedConfig,
 ): BranchType | "main" | "dev" | null {
   if (branchName === config.main) return "main";
   if (branchName === config.dev) return "dev";
@@ -54,7 +39,7 @@ function classifyBranch(
  */
 function formatMergeTarget(
   mergeTarget: "main" | "dev" | "main-then-dev",
-  config: ResolvedConfig
+  config: ResolvedConfig,
 ): string {
   if (mergeTarget === "main-then-dev") {
     return `${config.main}, then ${config.dev}`;
@@ -78,7 +63,7 @@ export async function run(args: ParsedArgs): Promise<void> {
   const config = resolveConfig(
     root,
     { main: args.main, dev: args.dev, remote: args.remote },
-    { verbose: !!verbose }
+    { verbose: !!verbose },
   );
   const current = await getCurrentBranch(root, {
     dryRun: !!dryRun,
@@ -129,12 +114,10 @@ export async function run(args: ParsedArgs): Promise<void> {
     console.log(`Merge target(s): ${mergeTargetDisplay}`);
   }
 
-  const { ahead, behind } = await getAheadBehind(
-    root,
-    baseBranch,
-    current,
-    { dryRun: !!dryRun, verbose: !!verbose }
-  );
+  const { ahead, behind } = await getAheadBehind(root, baseBranch, current, {
+    dryRun: !!dryRun,
+    verbose: !!verbose,
+  });
 
   if (!quiet) {
     console.log(`Ahead/behind: ${ahead} ahead, ${behind} behind`);

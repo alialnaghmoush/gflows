@@ -5,9 +5,70 @@
  */
 
 export type {
+  ConfigCliOverrides,
+  ReadConfigResult,
+  ResolveConfigOptions,
+} from "./config.js";
+export {
+  getBranchTypeMeta,
+  getPrefixForType,
+  readConfigFile,
+  resolveConfig,
+  writeConfigFile,
+} from "./config.js";
+export {
+  DEFAULT_DEV,
+  DEFAULT_MAIN,
+  DEFAULT_PREFIXES,
+  DEFAULT_REMOTE,
+  EXIT_GIT,
+  EXIT_OK,
+  EXIT_USER,
+  INVALID_BRANCH_CHARS,
+  VERSION_REGEX,
+} from "./constants.js";
+export {
+  BranchNotFoundError,
+  CannotDeleteMainOrDevError,
+  DetachedHeadError,
+  DirtyWorkingTreeError,
+  exitCodeForError,
+  GflowsError,
+  InvalidBranchNameError,
+  InvalidVersionError,
+  MergeConflictError,
+  NotRepoError,
+  RebaseMergeInProgressError,
+} from "./errors.js";
+export type { GitOptions, GitRunOptions, GitRunResult } from "./git.js";
+export {
+  assertNoRebaseOrMerge,
+  assertNotDetached,
+  branchList,
+  checkout,
+  deleteBranch,
+  ensureGitRepo,
+  fetch,
+  getAheadBehind,
+  getCurrentBranch,
+  hasRemoteRef,
+  isClean,
+  isDetachedHead,
+  isRebaseOrMergeInProgress,
+  merge,
+  push,
+  resolveRepoRoot,
+  revParse,
+  runGit,
+  tag,
+  tagExists,
+  validateBranchName,
+} from "./git.js";
+export type {
+  BranchPrefixes,
   BranchType,
   BranchTypeBase,
-  BranchPrefixes,
+  BranchTypeMeta,
   BumpDirection,
   BumpType,
   Command,
@@ -15,70 +76,5 @@ export type {
   MergeTarget,
   ParsedArgs,
   ResolvedConfig,
-  BranchTypeMeta,
 } from "./types.js";
 export { BRANCH_TYPE_SHORTS } from "./types.js";
-
-export {
-  readConfigFile,
-  resolveConfig,
-  writeConfigFile,
-  getPrefixForType,
-  getBranchTypeMeta,
-} from "./config.js";
-export type {
-  ConfigCliOverrides,
-  ReadConfigResult,
-  ResolveConfigOptions,
-} from "./config.js";
-
-export {
-  runGit,
-  resolveRepoRoot,
-  ensureGitRepo,
-  revParse,
-  branchList,
-  checkout,
-  merge,
-  push,
-  tag,
-  tagExists,
-  deleteBranch,
-  isClean,
-  getCurrentBranch,
-  isDetachedHead,
-  isRebaseOrMergeInProgress,
-  assertNotDetached,
-  assertNoRebaseOrMerge,
-  validateBranchName,
-  fetch,
-  hasRemoteRef,
-  getAheadBehind,
-} from "./git.js";
-export type { GitOptions, GitRunOptions, GitRunResult } from "./git.js";
-
-export {
-  GflowsError,
-  NotRepoError,
-  BranchNotFoundError,
-  DirtyWorkingTreeError,
-  DetachedHeadError,
-  RebaseMergeInProgressError,
-  MergeConflictError,
-  InvalidVersionError,
-  InvalidBranchNameError,
-  CannotDeleteMainOrDevError,
-  exitCodeForError,
-} from "./errors.js";
-
-export {
-  EXIT_OK,
-  EXIT_USER,
-  EXIT_GIT,
-  DEFAULT_MAIN,
-  DEFAULT_DEV,
-  DEFAULT_REMOTE,
-  DEFAULT_PREFIXES,
-  VERSION_REGEX,
-  INVALID_BRANCH_CHARS,
-} from "./constants.js";

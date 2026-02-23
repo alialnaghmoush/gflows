@@ -5,9 +5,8 @@
  * @module tests/helpers
  */
 
-import { mkdir, writeFile, rm } from "node:fs/promises";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { tmpdir } from "node:os";
 
 const PROJECT_ROOT = join(import.meta.dir, "..");
 /** Use workspace-scoped temp dir so sandbox allows git ops. */
@@ -27,7 +26,7 @@ export interface RunGflowsResult {
 export async function runGflows(
   repoDir: string,
   args: string[],
-  options?: { stdin?: string }
+  options?: { stdin?: string },
 ): Promise<RunGflowsResult> {
   const fullArgs = ["-C", repoDir, ...args];
   const proc = Bun.spawn(["bun", "run", CLI_PATH, ...fullArgs], {
@@ -54,10 +53,7 @@ export async function runGflows(
  * Caller should clean up with rm(dir, { recursive: true }) or use a unique subdir and clean later.
  */
 export async function createTempRepo(): Promise<string> {
-  const dir = join(
-    TEST_TMP,
-    `gflows-test-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
-  );
+  const dir = join(TEST_TMP, `gflows-test-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`);
   await mkdir(dir, { recursive: true });
   const env = {
     ...process.env,

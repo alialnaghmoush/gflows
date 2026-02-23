@@ -45,10 +45,7 @@ export interface GitRunResult {
  * @param options - cwd, dryRun, verbose.
  * @returns Promise with stdout, stderr, and exitCode.
  */
-export async function runGit(
-  args: string[],
-  options: GitOptions
-): Promise<GitRunResult> {
+export async function runGit(args: string[], options: GitOptions): Promise<GitRunResult> {
   const { cwd, dryRun = false, verbose = false } = options;
   const cmd = ["git", ...args].join(" ");
 
@@ -133,7 +130,7 @@ export async function revParse(
   cwd: string,
   ref: string,
   extraArgs: string[] = [],
-  options: Pick<GitOptions, "dryRun" | "verbose"> = {}
+  options: Pick<GitOptions, "dryRun" | "verbose"> = {},
 ): Promise<string> {
   const result = await runGit(["rev-parse", ...extraArgs, ref], { cwd, ...options });
   if (result.exitCode !== 0) {
@@ -151,7 +148,7 @@ export async function revParse(
  */
 export async function branchList(
   cwd: string,
-  options: GitRunOptions & { includeRemote?: boolean } = {}
+  options: GitRunOptions & { includeRemote?: boolean } = {},
 ): Promise<string[]> {
   const { includeRemote = false, ...opts } = options;
   const args = includeRemote
@@ -182,7 +179,7 @@ export async function branchList(
 export async function checkout(
   cwd: string,
   branch: string,
-  options: GitRunOptions = {}
+  options: GitRunOptions = {},
 ): Promise<void> {
   const result = await runGit(["checkout", branch], { cwd, ...options });
   if (result.exitCode !== 0) {
@@ -201,7 +198,7 @@ export async function checkout(
 export async function merge(
   cwd: string,
   ref: string,
-  options: GitRunOptions & { noFf?: boolean } = {}
+  options: GitRunOptions & { noFf?: boolean } = {},
 ): Promise<void> {
   const { noFf = false, ...opts } = options;
   const args = noFf ? ["merge", "--no-ff", ref] : ["merge", ref];
@@ -229,7 +226,7 @@ export async function push(
   remote: string,
   refs: string[],
   pushTags: boolean,
-  options: GitRunOptions = {}
+  options: GitRunOptions = {},
 ): Promise<number> {
   const pushArgs = ["push", remote, ...refs];
   const result = await runGit(pushArgs, { cwd, ...options });
@@ -254,7 +251,7 @@ export async function push(
 export async function tag(
   cwd: string,
   name: string,
-  options: GitRunOptions & { sign?: boolean; tagMessage?: string } = {}
+  options: GitRunOptions & { sign?: boolean; tagMessage?: string } = {},
 ): Promise<void> {
   const { sign = false, tagMessage, ...opts } = options;
   const args = ["tag", name];
@@ -280,7 +277,7 @@ export async function tag(
 export async function tagExists(
   cwd: string,
   name: string,
-  options: GitRunOptions = {}
+  options: GitRunOptions = {},
 ): Promise<boolean> {
   const result = await runGit(["tag", "-l", name], { cwd, ...options });
   return result.exitCode === 0 && result.stdout.trim() === name;
@@ -297,13 +294,11 @@ export async function tagExists(
 export async function deleteBranch(
   cwd: string,
   branch: string,
-  options: GitRunOptions = {}
+  options: GitRunOptions = {},
 ): Promise<void> {
   const result = await runGit(["branch", "-d", branch], { cwd, ...options });
   if (result.exitCode !== 0) {
-    throw new BranchNotFoundError(
-      result.stderr.trim() || `Could not delete branch '${branch}'.`
-    );
+    throw new BranchNotFoundError(result.stderr.trim() || `Could not delete branch '${branch}'.`);
   }
 }
 
@@ -313,10 +308,7 @@ export async function deleteBranch(
  * @param cwd - Repo root.
  * @param options - dryRun, verbose (verbose has no effect for this read-only call).
  */
-export async function isClean(
-  cwd: string,
-  options: GitRunOptions = {}
-): Promise<boolean> {
+export async function isClean(cwd: string, options: GitRunOptions = {}): Promise<boolean> {
   const result = await runGit(["status", "--porcelain"], { cwd, ...options });
   if (result.exitCode !== 0) return false;
   return result.stdout.trim() === "";
@@ -330,7 +322,7 @@ export async function isClean(
  */
 export async function getCurrentBranch(
   cwd: string,
-  options: GitRunOptions = {}
+  options: GitRunOptions = {},
 ): Promise<string | null> {
   const result = await runGit(["rev-parse", "--abbrev-ref", "HEAD"], {
     cwd,
@@ -404,7 +396,7 @@ export function validateBranchName(name: string): void {
   }
   if (INVALID_BRANCH_CHARS.test(name)) {
     throw new InvalidBranchNameError(
-      "Branch name contains invalid characters (e.g. .., ~, ^, ?, *, [, ], :, \\, space)."
+      "Branch name contains invalid characters (e.g. .., ~, ^, ?, *, [, ], :, \\, space).",
     );
   }
 }
@@ -420,7 +412,7 @@ export function validateBranchName(name: string): void {
 export async function fetch(
   cwd: string,
   remote: string,
-  options: GitRunOptions = {}
+  options: GitRunOptions = {},
 ): Promise<number> {
   const result = await runGit(["fetch", remote], { cwd, ...options });
   return result.exitCode;
@@ -442,7 +434,7 @@ export async function hasRemoteRef(
   cwd: string,
   remote: string,
   ref: string,
-  options: GitRunOptions = {}
+  options: GitRunOptions = {},
 ): Promise<boolean> {
   const result = await runGit(["ls-remote", "--exit-code", remote, ref], {
     cwd,
@@ -465,12 +457,12 @@ export async function getAheadBehind(
   cwd: string,
   baseRef: string,
   headRef: string,
-  options: GitRunOptions = {}
+  options: GitRunOptions = {},
 ): Promise<{ ahead: number; behind: number }> {
-  const result = await runGit(
-    ["rev-list", "--left-right", "--count", `${baseRef}...${headRef}`],
-    { cwd, ...options }
-  );
+  const result = await runGit(["rev-list", "--left-right", "--count", `${baseRef}...${headRef}`], {
+    cwd,
+    ...options,
+  });
   if (result.exitCode !== 0 || !result.stdout.trim()) {
     return { ahead: 0, behind: 0 };
   }

@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+
 /**
  * Internal publish script: sync version from package.json to jsr.json,
  * then publish to npm and/or JSR. Not part of the published package.
@@ -13,9 +14,9 @@
  *   --force      Skip pre-publish checks (clean tree, branch main).
  */
 
-import { parseArgs } from "node:util";
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { parseArgs } from "node:util";
 
 const REPO_ROOT = process.cwd();
 const PACKAGE_JSON_PATH = join(REPO_ROOT, "package.json");
@@ -83,7 +84,7 @@ function readJsrJson(): JsrJson | null {
  * Writes jsr.json with the given content (pretty-printed).
  */
 function writeJsrJson(jsr: JsrJson): void {
-  writeFileSync(JSR_JSON_PATH, JSON.stringify(jsr, null, 2) + "\n", "utf-8");
+  writeFileSync(JSR_JSON_PATH, `${JSON.stringify(jsr, null, 2)}\n`, "utf-8");
 }
 
 /**
@@ -116,7 +117,7 @@ function syncVersion(): string {
 function run(cmd: string[], opts: { cwd: string; verbose?: boolean }): Promise<boolean> {
   const { cwd, verbose = true } = opts;
   if (verbose) {
-    console.error("[publish] " + cmd.join(" "));
+    console.error(`[publish] ${cmd.join(" ")}`);
   }
   const proc = Bun.spawn(cmd, {
     cwd,
@@ -166,7 +167,7 @@ async function prePublishChecks(force: boolean): Promise<void> {
   const clean = await isCleanTree();
   if (!clean) {
     console.error(
-      "[publish] Working tree is not clean. Commit or stash changes, or use --force to skip."
+      "[publish] Working tree is not clean. Commit or stash changes, or use --force to skip.",
     );
     process.exit(2);
   }
@@ -174,7 +175,7 @@ async function prePublishChecks(force: boolean): Promise<void> {
   const branch = await getCurrentBranch();
   if (branch !== "main") {
     console.error(
-      `[publish] Current branch is "${branch ?? "detached"}", not main. Checkout main or use --force to skip.`
+      `[publish] Current branch is "${branch ?? "detached"}", not main. Checkout main or use --force to skip.`,
     );
     process.exit(2);
   }

@@ -8,16 +8,31 @@ A lightweight CLI for consistent Git branching workflows: long-lived **main** (p
 
 ## Table of contents
 
+**Get started**
+
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
-- [Concepts](#concepts)
 - [Quick start](#quick-start)
-- [Command reference](#command-reference)
+
+**Understand**
+
+- [Concepts](#concepts)
+- [Flowcharts](#flowcharts)
 - [Branch types in detail](#branch-types-in-detail)
+
+**Reference**
+
+- [Command reference](#command-reference)
+
+**Configure & operate**
+
 - [Configuration](#configuration)
 - [Scripting and CI](#scripting-and-ci)
 - [Exit codes](#exit-codes)
 - [Troubleshooting](#troubleshooting)
+
+**More**
+
 - [Shell completion](#shell-completion)
 - [Publishing (maintainers)](#publishing-maintainers)
 - [License](#license)
@@ -26,8 +41,8 @@ A lightweight CLI for consistent Git branching workflows: long-lived **main** (p
 
 ## Prerequisites
 
-- **Bun** ≥ 1.0 (recommended). The CLI runs TypeScript directly; no separate build step.
-- **Git** for all repository operations.
+- **Bun** ≥ 1.0 (recommended). The CLI runs TypeScript directly.
+- **Git** for repository operations.
 
 Check versions:
 
@@ -40,76 +55,12 @@ git --version
 
 ## Installation
 
-**As a dev dependency (recommended):**
+**Dev dependency (recommended):** `bun add --dev gflows` or `npm install --save-dev gflows`.  
+**JSR:** `npx jsr add --dev @alialnaghmoush/gflows` or `deno add --dev jsr:@alialnaghmoush/gflows`.
 
-**npm**
+Run with `bunx gflows ...` or `npx gflows ...`. [npm](https://www.npmjs.com/package/gflows) · [JSR](https://jsr.io/@alialnaghmoush/gflows)
 
-```bash
-npm install --save-dev gflows
-```
-
-**Bun**
-
-```bash
-bun add --dev gflows
-```
-
-**JSR (npm / npx)**
-
-```bash
-npx jsr add --dev @alialnaghmoush/gflows
-```
-
-**JSR (Bun / bunx)**
-
-```bash
-bunx jsr add --dev @alialnaghmoush/gflows
-```
-
-**JSR (Deno)**
-
-```bash
-deno add --dev jsr:@alialnaghmoush/gflows
-```
-
-Available on:
-
-- [npm: gflows](https://www.npmjs.com/package/gflows)
-- [JSR: @alialnaghmoush/gflows](https://jsr.io/@alialnaghmoush/gflows)
-
-If installed as a local dev dependency, run via your package runner:
-
-- Bun: `bunx gflows ...` (or `bun gflows ...` when available in your Bun setup)
-- npm: `npx gflows ...`
-
-**Global install (optional):**
-
-**npm**
-
-```bash
-npm install --global gflows
-```
-
-**Bun**
-
-```bash
-bun add --global gflows
-```
-
----
-
-## Concepts
-
-- **main** — Long-lived production branch. Default name: `main`. Only release and hotfix branches merge here.
-- **dev** — Long-lived integration branch. Default name: `dev`. Feature, bugfix, chore, and spike branches merge here. Created by `gflows init` from `main`.
-- **Workflow branches** — Short-lived branches with a type prefix (e.g. `feature/`, `bugfix/`, `release/`). Each type has a **base** branch and **merge target(s)**. gflows never rewrites history (no rebase by default).
-- **Merge targets** — Where `gflows finish` merges:
-  - **feature / chore / spike** → `dev` only.
-  - **bugfix** → `dev` (or `main` if the bugfix was started from main with `-o main`).
-  - **release** → `main` first, then `main` is merged into `dev`; a tag is created.
-  - **hotfix** → `main` first, then `main` is merged into `dev`; a tag is created.
-
-You can override branch names and prefixes via [configuration](#configuration).
+**Global:** `bun add --global gflows` or `npm install --global gflows`
 
 ---
 
@@ -118,49 +69,196 @@ You can override branch names and prefixes via [configuration](#configuration).
 **1. One-time setup** — In your repo, ensure `main` exists and create `dev`:
 
 ```bash
-gflows init
+bun gflows init
 ```
 
-Optional: use `--push` to push `dev` to the remote, or `--dry-run` to preview. To use different branch or remote names, pass `--main`, `--dev`, and `--remote`; those values are written to `.gflows.json` for future runs.
+Use `--no-push` to skip push, `--dry-run` to preview. Pass `--main`, `--dev`, `--remote` to persist to `.gflows.json`.
 
 ```bash
-gflows init --push                                    # create dev, then push to origin
-gflows init --main main --dev develop --remote origin # custom names, persisted to .gflows.json
+bun gflows init --main main --dev develop --remote origin
 ```
 
 **2. Daily development** (feature → dev):
 
 ```bash
-gflows start feature add-login
+bun gflows start feature add-login
 # ... code, commit ...
-gflows finish feature                    # merge into dev
-gflows finish feature --push              # merge and push dev
-gflows finish feature --push -D           # merge, push, and delete local branch
+bun gflows finish feature
+bun gflows finish feature --push
+bun gflows finish feature --push -D
 ```
 
 **3. Release** (dev → main, then tag):
 
 ```bash
-gflows bump up minor                      # e.g. 1.2.3 → 1.3.0
-gflows start release v1.3.0
+bun gflows bump up minor
+bun gflows start release v1.3.0
 # ... update CHANGELOG, commit ...
-gflows finish release --push              # merge to main, then dev; tag v1.3.0; push
+bun gflows finish release --push
 ```
 
 **4. Hotfix** (main → fix → main + dev):
 
 ```bash
-gflows start hotfix v1.3.1
+bun gflows start hotfix v1.3.1
 # ... fix, commit ...
-gflows finish hotfix --push               # merge to main, then dev; tag v1.3.1; push
+bun gflows finish hotfix --push
 ```
+
+---
+
+## Concepts
+
+- **main** — Production branch. Only release and hotfix merge here.
+- **dev** — Integration branch. Feature, bugfix, chore, spike merge here. Created by `gflows init` from main.
+- **Workflow branches** — Short-lived branches with a type prefix; each has a base and merge target(s). No history rewriting.
+- **Merge targets:** feature/chore/spike → dev; bugfix → dev (or main with `-o main`); release/hotfix → main then dev + tag.
+
+Override names and prefixes via [configuration](#configuration).
+
+---
+
+## Flowcharts
+
+### Lifecycle (init → start → finish)
+
+```mermaid
+flowchart LR
+  subgraph setup["One-time setup"]
+    A[main exists] --> B["bun gflows init"]
+    B --> C[dev created]
+    C --> D[optional: push dev]
+  end
+  subgraph daily["Daily workflow"]
+    E["bun gflows start<br/>type name"] --> F[work & commit]
+    F --> G["bun gflows finish<br/>type"]
+    G --> H{type?}
+    H -->|feature/bugfix/chore/spike| I[merged to dev]
+    H -->|release/hotfix| J[merged to main → dev + tag]
+  end
+  setup --> daily
+```
+
+### init
+
+```mermaid
+flowchart TD
+  Start([bun gflows init]) --> Repo{In git repo?}
+  Repo -->|no| ErrRepo[Exit: Not a repo]
+  Repo -->|yes| MainExists{main branch exists?}
+  MainExists -->|no| ErrMain[Exit: Create main first]
+  MainExists -->|yes| DevExists{dev branch exists?}
+  DevExists -->|yes| DoneNoOp[Done: nothing to do]
+  DevExists -->|no| CreateDev[Create dev from main]
+  CreateDev --> Push{--no-push?}
+  Push -->|no| DoPush[Push dev to remote]
+  Push -->|yes| SkipPush[Skip push]
+  DoPush --> Done[Done]
+  SkipPush --> Done
+  DoneNoOp --> Done
+```
+
+### start
+
+```mermaid
+flowchart TD
+  Start([bun gflows start type name]) --> Repo{In git repo?}
+  Repo -->|no| ErrRepo[Exit: Not a repo]
+  Repo -->|yes| Clean{Tree clean or --force?}
+  Clean -->|no| ErrDirty[Exit: Uncommitted changes]
+  Clean -->|yes| Base[Resolve base branch for type]
+  Base --> BaseExists{Base exists locally or remote?}
+  BaseExists -->|no| ErrBase[Exit: Base not found]
+  BaseExists -->|yes| Create[Create workflow branch from base]
+  Create --> PushOpt{--push?}
+  PushOpt -->|yes| Push[Push new branch to remote]
+  PushOpt -->|no| Done[Done]
+  Push --> Done
+```
+
+### finish (merge targets by branch type)
+
+```mermaid
+flowchart TD
+  Start([bun gflows finish type]) --> Resolve[Resolve branch to finish]
+  Resolve --> T{type}
+  T -->|feature / chore / spike| M1[Merge → dev]
+  T -->|bugfix from dev| M1
+  T -->|bugfix from main| M2[Merge → main]
+  T -->|release| M3[Merge → main]
+  M3 --> M3b[Merge main → dev]
+  M3b --> Tag1[Create tag]
+  T -->|hotfix| M4[Merge → main]
+  M4 --> M4b[Merge main → dev]
+  M4b --> Tag2[Create tag]
+  M2 --> M2b[Merge main → dev]
+  M1 --> Opt[Optional: delete branch, push]
+  M2b --> Opt
+  Tag1 --> Opt
+  Tag2 --> Opt
+  Opt --> Done([Done])
+```
+
+### Branch types and merge targets
+
+```mermaid
+flowchart TB
+  subgraph longlived["Long-lived branches"]
+    main[main]
+    dev[dev]
+  end
+  subgraph workflow["Workflow branches"]
+    feature[feature/...]
+    bugfix[bugfix/...]
+    chore[chore/...]
+    release[release/...]
+    hotfix[hotfix/...]
+    spike[spike/...]
+  end
+  feature --> dev
+  chore --> dev
+  spike --> dev
+  bugfix --> dev
+  bugfix -.->|"-o main"| main
+  release --> main
+  main --> dev
+  release -.-> dev
+  hotfix --> main
+  main --> dev
+  hotfix -.-> dev
+```
+
+### bump (version)
+
+```mermaid
+flowchart LR
+  Start([bun gflows bump direction type]) --> Discover[Discover package.json, jsr.json]
+  Discover --> Read[Read version from primary root]
+  Read --> Calc[Compute new version]
+  Calc --> Write[Write to all roots]
+  Write --> Done([Done])
+```
+
+---
+
+## Branch types in detail
+
+| Type    | Short | Base (default) | With `-o main` | Merge target(s)            | Tag |
+| ------- | ----- | -------------- | -------------- | -------------------------- | --- |
+| feature | `-f`  | dev            | —              | dev                        | no  |
+| bugfix  | `-b`  | dev            | main           | dev (or main if from main) | no  |
+| chore   | `-c`  | dev            | —              | dev                        | no  |
+| release | `-r`  | dev            | —              | main, then dev             | yes |
+| hotfix  | `-x`  | main           | —              | main, then dev             | yes |
+| spike   | `-e`  | dev            | —              | dev                        | no  |
+
+Release and hotfix names must be a version (`vX.Y.Z` or `X.Y.Z`). Branch names use default prefixes (e.g. `feature/add-login`); override in [configuration](#configuration). Invalid names (e.g. `..`, `*`, spaces) → exit 1.
 
 ---
 
 ## Command reference
 
 ### Summary table
-
 
 | Command      | Short | Description                                                               |
 | ------------ | ----- | ------------------------------------------------------------------------- |
@@ -177,9 +275,7 @@ gflows finish hotfix --push               # merge to main, then dev; tag v1.3.1;
 | `version`    | `-V`  | Show version.                                                             |
 
 
-**Branch types (for start/finish/list):** `feature` (`-f`), `bugfix` (`-b`), `chore` (`-c`), `release` (`-r`), `hotfix` (`-x`), `spike` (`-e`).
-
-**Common flags** (used by multiple commands):
+**Common flags:**
 
 
 | Flag              | Short | Description                           |
@@ -202,18 +298,14 @@ gflows finish hotfix --push               # merge to main, then dev; tag v1.3.1;
 
 ### init
 
-Ensures the **main** branch exists (exits with error if not). Creates **dev** from main if it does not exist; does nothing if dev already exists. Does not rewrite or force-push.
-
-You can set and persist config with `**--main`**, `**--dev`**, and `**-R`/`--remote**`. Any of these flags cause init to write or update `.gflows.json` with the given values (after a successful init; skipped with `--dry-run`).
+Ensures main exists; creates dev from main if missing. Use `--main`, `--dev`, `-R` to persist to `.gflows.json`.
 
 **Examples:**
 
 ```bash
-gflows init
-gflows init --push              # push dev to remote after creating
-gflows init --main main --dev develop --remote origin   # create dev branch "develop", persist to .gflows.json
-gflows init -C ../other-repo    # run in another directory
-gflows init --dry-run           # log intended actions only
+bun gflows init
+bun gflows init --main main --dev develop --remote origin
+bun gflows init -C ../other-repo --dry-run
 ```
 
 **Flags:**
@@ -221,7 +313,7 @@ gflows init --dry-run           # log intended actions only
 
 | Flag              | Short | Description                                                   |
 | ----------------- | ----- | ------------------------------------------------------------- |
-| `--push`          | `-p`  | Push dev to remote after creating.                            |
+| `--push`          | `-p`  | Push dev to remote after creating (default).                  |
 | `--main <name>`   | —     | Main branch name (persisted to `.gflows.json` when provided). |
 | `--dev <name>`    | —     | Dev branch name (persisted to `.gflows.json` when provided).  |
 | `--remote <name>` | `-R`  | Remote name (persisted to `.gflows.json` when provided).      |
@@ -235,21 +327,16 @@ gflows init --dry-run           # log intended actions only
 
 ### start
 
-Creates a new workflow branch from the correct base. **Requires** type and name (e.g. `start feature my-feat`). For **release** and **hotfix**, the name must be a version: `vX.Y.Z` or `X.Y.Z` (e.g. `v1.2.0`).
-
-**Pre-checks:** Repository is Git; not detached HEAD; no rebase/merge in progress; working tree clean (unless `--force`); base branch exists (local or after fetch).
+Creates a workflow branch from the correct base. Requires type + name; release/hotfix name must be a version. Pre-checks: git repo, clean tree (or `--force`), base exists.
 
 **Examples:**
 
 ```bash
-gflows start feature auth-refactor
-gflows start -f auth-refactor                    # same (short type)
-gflows start bugfix fix-login --from main        # bugfix from main instead of dev
-gflows start release v2.0.0
-gflows start hotfix 1.2.1                        # "v" is optional for version
-gflows start feature wip --force                 # allow uncommitted changes
-gflows start feature api-v2 --push               # create branch and push to remote
-gflows start chore deps-update -C ./backend      # run in subdirectory
+bun gflows start feature auth-refactor
+bun gflows start bugfix fix-login --from main
+bun gflows start release v2.0.0
+bun gflows start hotfix 1.2.1
+bun gflows start feature wip --force --push
 ```
 
 **Flags:**
@@ -271,24 +358,16 @@ gflows start chore deps-update -C ./backend      # run in subdirectory
 
 ### finish
 
-Merges the current workflow branch (or the one given with `-B`) into its merge target(s). For **release** and **hotfix**, merges into main first, then merges main into dev and creates a tag. Uses normal merge; use `--no-ff` to always create a merge commit. On **merge conflict**, gflows exits with a clear message and does not complete the merge—you resolve conflicts manually, then run `git merge --continue` or re-run `gflows finish` as needed.
-
-**Pre-checks:** Not detached HEAD; no rebase/merge in progress; current branch (or `-B` target) is not main or dev; for release/hotfix, tag does not already exist.
+Merges the branch (current or `-B`) into its target(s). Release/hotfix: merge to main, then main → dev, create tag. Use `--no-ff` for a merge commit. On conflict, resolve then `git merge --continue` or re-run finish.
 
 **Examples:**
 
 ```bash
-gflows finish feature                      # merge current branch (feature/xyz) into dev
-gflows finish feature -B feature/auth      # finish branch feature/auth
-gflows finish feature --no-ff              # always create a merge commit
-gflows finish feature --push -D            # merge, push, delete local branch
-gflows finish release --push               # merge to main, then dev; tag; push
-gflows finish hotfix -s                    # sign the tag (GPG)
-gflows finish hotfix -T                    # no tag (e.g. abandon hotfix as release)
-gflows finish -y                           # skip "Delete branch after finish?" prompt (use default)
+bun gflows finish feature
+bun gflows finish feature -B feature/auth --push -D
+bun gflows finish release --push
+bun gflows finish hotfix -s -T -y
 ```
-
-**Branch resolution:** If you omit the branch name, gflows uses the current branch. With `-B` and no value in a TTY, it shows a picker of workflow branches. Without a TTY, you must pass the branch name explicitly.
 
 **Flags:**
 
@@ -316,14 +395,14 @@ gflows finish -y                           # skip "Delete branch after finish?" 
 
 ### switch
 
-Switches to a workflow branch. With a **TTY** and no branch name, shows an interactive **picker** of local workflow branches. Otherwise you must pass the branch name as a positional.
+Switch to a workflow branch. With TTY and no name, shows a picker; otherwise pass branch name.
 
 **Examples:**
 
 ```bash
-gflows switch                      # picker (if TTY)
-gflows switch feature/auth-refactor
-gflows -W feature/auth-refactor    # same with short command
+bun gflows switch
+bun gflows switch feature/auth-refactor
+bun gflows -W feature/auth-refactor
 ```
 
 **Flags:**
@@ -340,14 +419,14 @@ gflows -W feature/auth-refactor    # same with short command
 
 ### delete
 
-Deletes **local** workflow branch(es). Never deletes the configured main or dev. With a **TTY** and no names, shows a picker (or multi-select if supported). Otherwise pass one or more branch names as positionals.
+Delete local workflow branch(es). Never deletes main/dev. TTY: picker; otherwise pass branch name(s).
 
 **Examples:**
 
 ```bash
-gflows delete                           # picker (if TTY)
-gflows delete feature/old-spike
-gflows delete feature/one feature/two    # delete multiple
+bun gflows delete
+bun gflows delete feature/old-spike
+bun gflows delete feature/one feature/two
 ```
 
 **Flags:**
@@ -364,16 +443,14 @@ gflows delete feature/one feature/two    # delete multiple
 
 ### list
 
-Lists workflow branches (those matching configured prefixes). Output is **one branch per line** to stdout for scripting. Optionally filter by type; optionally include remote-tracking branches (with `-r`/`--include-remote`, which may run `git fetch` first).
+List workflow branches (one per line). Filter by type; use `-r` to include remote (may run `git fetch`).
 
 **Examples:**
 
 ```bash
-gflows list                              # all local workflow branches
-gflows list feature                      # only feature/* branches
-gflows list -r                           # include remote-tracking branches
-gflows list -r feature                   # remote + local feature branches
-gflows list --include-remote
+bun gflows list
+bun gflows list feature
+bun gflows list -r
 ```
 
 **Flags:**
@@ -392,20 +469,14 @@ gflows list --include-remote
 
 ### bump
 
-Bumps or rolls back the **root** package version (reads `package.json` from cwd or `-C`). Keeps `package.json` and `jsr.json` in sync; **no git operations** (no commit or tag). Useful before `gflows start release vX.Y.Z`.
-
-**Positionals:** direction `up` | `down`, type `patch` | `minor` | `major`. When both are omitted and stdin is a TTY, shows interactive selects. When not a TTY, both are required.
+Bump or rollback version in `package.json` and `jsr.json` (monorepo: all discovered roots). No git operations. Direction: `up`|`down`; type: `patch`|`minor`|`major`. TTY: interactive; non-TTY: both required.
 
 **Examples:**
 
 ```bash
-gflows bump up patch                     # 1.2.3 → 1.2.4
-gflows bump up minor                     # 1.2.3 → 1.3.0
-gflows bump up major                     # 1.2.3 → 2.0.0
-gflows bump down patch                   # 1.2.4 → 1.2.3 (floor at 0)
-gflows bump down minor                   # 1.3.0 → 1.2.0
-gflows bump                              # interactive (direction + type) when TTY
-gflows bump --dry-run                    # print old → new, no file writes
+bun gflows bump up patch
+bun gflows bump down minor
+bun gflows bump --dry-run
 ```
 
 **Flags:**
@@ -423,13 +494,13 @@ gflows bump --dry-run                    # print old → new, no file writes
 
 ### status
 
-Shows current branch, its **classification** (feature, bugfix, chore, release, hotfix, spike, main, dev, or unknown), **base** branch, **merge target(s)**, and **ahead/behind** vs base. No write operations; safe to run anytime.
+Shows current branch, type, base, merge target(s), ahead/behind. Read-only.
 
 **Examples:**
 
 ```bash
-gflows status
-gflows -t
+bun gflows status
+bun gflows -t
 ```
 
 **Flags:**
@@ -446,58 +517,17 @@ gflows -t
 
 ### completion
 
-Prints the shell completion script. Use with `source` (bash/zsh) or pipe into your shell (fish) to enable tab-completion for commands, types, and branch names.
-
-**Examples:** See [Shell completion](#shell-completion).
-
----
+Prints completion script for bash/zsh/fish. See [Shell completion](#shell-completion).
 
 ### help & version
 
-```bash
-gflows help
-gflows -h
-gflows version
-gflows -V
-```
-
----
-
-## Branch types in detail
-
-
-| Type    | Short | Base (default) | With `-o main` | Merge target(s)            | Tag |
-| ------- | ----- | -------------- | -------------- | -------------------------- | --- |
-| feature | `-f`  | dev            | —              | dev                        | no  |
-| bugfix  | `-b`  | dev            | main           | dev (or main if from main) | no  |
-| chore   | `-c`  | dev            | —              | dev                        | no  |
-| release | `-r`  | dev            | —              | main, then dev             | yes |
-| hotfix  | `-x`  | main           | —              | main, then dev             | yes |
-| spike   | `-e`  | dev            | —              | dev                        | no  |
-
-
-- **feature** — New functionality; branches from dev, merges to dev.
-- **bugfix** — Bug fixes. Usually from dev → dev. Use `-o main` when fixing a bug on production (branch from main, merge to main then dev).
-- **chore** — Tasks that don’t change behavior (deps, tooling, docs). dev → dev.
-- **release** — Prepare a release from dev: merge to main, then merge main into dev, create tag (e.g. `v1.2.0`). Name must be a version: `vX.Y.Z` or `X.Y.Z`.
-- **hotfix** — Urgent fix from production (main). Merge to main, then main into dev; tag. Name must be a version.
-- **spike** — Short-lived experiment; dev → dev, no tag. Discard or merge as needed.
-
-**Naming:** Branch names use prefixes by default: `feature/add-login`, `bugfix/fix-login`, `release/v1.0.0`, `hotfix/v1.0.1`, `chore/update-deps`, `spike/try-cache`. Prefixes can be overridden in [configuration](#configuration). Invalid branch names (e.g. containing `..`, `*`, spaces) are rejected with exit code 1.
+`bun gflows help` · `bun gflows -V`
 
 ---
 
 ## Configuration
 
-Configuration is **optional**. Override branch names, remote, and branch **prefixes** when needed.
-
-**Resolution order** (later overrides earlier):
-
-1. Built-in defaults (`main`, `dev`, `origin`, and default prefixes).
-2. Repo config file: `**.gflows.json`** in repo root, or `**gflows`** key in `**package.json`**.
-3. CLI (e.g. `--main`, `--dev`, `-R`/`--remote`).
-
-Only include keys you want to override; the rest stay default. Invalid or malformed config is ignored (with an optional warning when using `-v`).
+Optional. Override main, dev, remote, prefixes. Resolution: defaults → `.gflows.json` or `package.json` "gflows" key → CLI flags. Invalid config is ignored (`-v` for warning).
 
 ### Example: `.gflows.json` (full)
 
@@ -517,91 +547,39 @@ Only include keys you want to override; the rest stay default. Invalid or malfor
 }
 ```
 
-### Example: minimal override (different branch names)
+### Example: minimal
 
 ```json
-{
-  "main": "master",
-  "dev": "develop"
-}
+{ "main": "master", "dev": "develop" }
 ```
 
-### Example: custom prefixes only
-
-```json
-{
-  "prefixes": {
-    "feature": "feat/",
-    "bugfix": "fix/"
-  }
-}
-```
-
-### Example: `package.json` key
-
-```json
-{
-  "name": "my-app",
-  "version": "1.0.0",
-  "gflows": {
-    "main": "main",
-    "dev": "development",
-    "remote": "upstream"
-  }
-}
-```
+Or in `package.json`: `"gflows": { "main": "main", "dev": "development", "remote": "upstream" }`
 
 ---
 
 ## Scripting and CI
 
-- **Non-interactive:** When stdin is **not** a TTY, gflows does **not** show pickers (e.g. for switch, delete, or finish `-B`). You must pass branch names explicitly or the command exits with a clear message (exit code 1).
-- **Skip confirmations:** Use `**-y`/`--yes`** to accept defaults (e.g. "Delete branch after finish?" → no delete unless you also passed `-D`).
-- **Exit codes:** Use them in scripts: `0` success, `1` usage/validation, `2` Git/system error.
-
-**Examples:**
+Non-TTY: no pickers; pass branch names explicitly. Use `-y` to skip confirmations. Exit codes: 0 success, 1 validation, 2 Git/state. Use `-C <dir>` to run in another directory.
 
 ```bash
-# Require explicit branch when not TTY
-gflows finish feature -B feature/add-login --push -y
-
-# List branches for parsing (one per line)
-gflows list feature | while read -r b; do echo "Branch: $b"; done
-
-# CI: fail fast on error
-set -e
-gflows start feature ci-job --force
-# ... run tests ...
-gflows finish feature -B feature/ci-job -y
-```
-
-**Path:** Use `-C`/`--path` so all git and config resolution use that directory:
-
-```bash
-gflows -C /var/lib/repos/my-app status
-gflows -C ./packages/api list
+bun gflows finish feature -B feature/add-login --push -y
+bun gflows list feature | while read -r b; do echo "$b"; done
+bun gflows -C ./packages/api list
 ```
 
 ---
 
 ## Exit codes
 
-
 | Code  | Meaning            | Typical causes                                                                                                                                                                                                      |
 | ----- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **0** | Success            | Command completed without error.                                                                                                                                                                                    |
-| **1** | Usage / validation | Missing type or name for `start`; invalid branch name or version format; wrong/missing positionals for non-TTY.                                                                                                     |
-| **2** | Git / system       | Not a Git repo; branch not found; dirty working tree (start without `--force`); merge conflict on finish; rebase/merge in progress; detached HEAD; finish on main/dev; tag already exists; push failed after merge. |
-
-
-**Validation (exit 1):** Invalid version (e.g. `start release foo`), invalid branch name (e.g. `feature/bad..name`), or missing required args in non-interactive mode.
-
-**Git/state (exit 2):** Repository issues, branch missing, merge conflicts (user must resolve manually), or guards (e.g. cannot finish main/dev, cannot delete main/dev).
+| **1** | Usage / validation | Missing type or name for `start`; invalid branch name or version; wrong/missing positionals when not TTY.                                                                                                           |
+| **2** | Git / system       | Not a repo; branch not found; dirty tree; merge conflict; rebase/merge in progress; detached HEAD; finish on main/dev; tag exists; push failed.                                                                   |
 
 ---
 
 ## Troubleshooting
-
 
 | Situation                                          | What to do                                                                                                                                                                  |
 | -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -616,54 +594,45 @@ gflows -C ./packages/api list
 | **Wrong remote or branch names**                   | Use `.gflows.json` or `package.json` "gflows" key, or `gflows init --main … --dev … --remote …`. Use `-R` for one-off remote override.                                      |
 
 
-Use `**-v`/`--verbose`** to see git commands and extra diagnostics; combine with the error message to pinpoint the cause.
+Use `-v` for verbose git commands and diagnostics.
 
 ---
 
 ## Shell completion
 
-Generate and install completion so you can tab-complete commands, types, and (where applicable) branch names.
-
 **Bash:**
 
 ```bash
-source <(gflows completion bash)
-# Or persist:
-echo 'source <(gflows completion bash)' >> ~/.bashrc
+source <(bun gflows completion bash)
+echo 'source <(bun gflows completion bash)' >> ~/.bashrc
 ```
 
 **Zsh:**
 
 ```bash
-source <(gflows completion zsh)
-# Or persist:
-echo 'source <(gflows completion zsh)' >> ~/.zshrc
+source <(bun gflows completion zsh)
+echo 'source <(bun gflows completion zsh)' >> ~/.zshrc
 ```
 
 **Fish:**
 
 ```bash
-gflows completion fish | source
-# Or persist:
-gflows completion fish > ~/.config/fish/completions/gflows.fish
+bun gflows completion fish | source
+bun gflows completion fish > ~/.config/fish/completions/gflows.fish
 ```
-
-Completion covers: **commands** (init, start, finish, switch, delete, list, bump, completion, status, help, version), **types** (feature, bugfix, chore, release, hotfix, spike), and **branch names** from local workflow branches when the context expects a branch (e.g. after `switch` or `finish -B`).
 
 ---
 
 ## Publishing (maintainers)
 
-Publishing is done with the **internal script** `scripts/publish.ts`. It syncs the version from **package.json** to **jsr.json**, then publishes to **npm** and/or **JSR**. The script is not part of the published package (`files` excludes `scripts/`).
-
-### Commands
+Internal script `scripts/publish.ts`: syncs version from package.json to jsr.json, then publishes to npm and/or JSR. Not in published package.
 
 ```bash
-bun run publish:all              # publish to npm and JSR (same version)
-bun run publish:all -- --dry-run # sync version only; print intended commands; no publish
-bun run publish:npm              # publish only to npm
-bun run publish:jsr              # publish only to JSR
-bun run publish:all -- --force   # skip pre-publish checks (clean tree, branch main)
+bun run publish:all
+bun run publish:all -- --dry-run
+bun run publish:npm
+bun run publish:jsr
+bun run publish:all -- --force
 ```
 
 ### Typical release workflow

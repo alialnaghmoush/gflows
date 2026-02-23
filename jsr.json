@@ -1,6 +1,6 @@
 {
   "name": "@alialnaghmoush/gflows",
-  "version": "0.1.13",
+  "version": "0.1.14",
   "description": "A lightweight CLI for consistent Git branching workflows (main + dev, feature/bugfix/chore/release/hotfix).",
   "license": "MIT",
   "exports": {
@@ -8,14 +8,7 @@
     "./cli": "./src/cli.ts"
   },
   "publish": {
-    "include": [
-      "src",
-      "README.md",
-      "LICENSE"
-    ],
-    "exclude": [
-      "tests",
-      "scripts"
-    ]
+    "include": ["src", "README.md", "LICENSE"],
+    "exclude": ["tests", "scripts"]
   }
 }

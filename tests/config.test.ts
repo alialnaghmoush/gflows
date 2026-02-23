@@ -2,19 +2,18 @@
  * Unit tests for config: readConfigFile, resolveConfig, getPrefixForType, getBranchTypeMeta.
  */
 
-import { describe, expect, test, beforeEach, afterEach } from "bun:test";
-import { join } from "node:path";
-import { mkdir, writeFile, rm } from "node:fs/promises";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
+  getBranchTypeMeta,
+  getPrefixForType,
   readConfigFile,
   resolveConfig,
   writeConfigFile,
-  getPrefixForType,
-  getBranchTypeMeta,
 } from "../src/config.ts";
-import type { BranchType } from "../src/types.ts";
-import { DEFAULT_MAIN, DEFAULT_DEV, DEFAULT_REMOTE, DEFAULT_PREFIXES } from "../src/constants.ts";
+import { DEFAULT_DEV, DEFAULT_MAIN, DEFAULT_PREFIXES, DEFAULT_REMOTE } from "../src/constants.ts";
 
 describe("readConfigFile", () => {
   let dir: string;
@@ -38,7 +37,7 @@ describe("readConfigFile", () => {
     await writeFile(
       join(dir, ".gflows.json"),
       JSON.stringify({ main: "master", dev: "develop" }),
-      "utf-8"
+      "utf-8",
     );
     const result = readConfigFile(dir);
     expect(result.config).not.toBeNull();
@@ -51,7 +50,7 @@ describe("readConfigFile", () => {
     await writeFile(
       join(dir, "package.json"),
       JSON.stringify({ name: "pkg", gflows: { main: "trunk", remote: "upstream" } }),
-      "utf-8"
+      "utf-8",
     );
     const result = readConfigFile(dir);
     expect(result.config).not.toBeNull();
@@ -71,7 +70,7 @@ describe("readConfigFile", () => {
     await writeFile(
       join(dir, ".gflows.json"),
       JSON.stringify({ prefixes: { feature: "feat/", bugfix: "fix/" } }),
-      "utf-8"
+      "utf-8",
     );
     const result = readConfigFile(dir);
     expect(result.config?.prefixes?.feature).toBe("feat/");
@@ -131,7 +130,7 @@ describe("writeConfigFile", () => {
     await writeFile(
       join(dir, ".gflows.json"),
       JSON.stringify({ main: "main", dev: "dev", remote: "origin" }),
-      "utf-8"
+      "utf-8",
     );
     writeConfigFile(dir, { dev: "develop" });
     const result = readConfigFile(dir);

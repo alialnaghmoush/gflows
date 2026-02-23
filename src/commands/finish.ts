@@ -5,13 +5,8 @@
  * @module commands/finish
  */
 
-import type { BranchType, ParsedArgs } from "../types.js";
+import { getBranchTypeMeta, resolveConfig } from "../config.js";
 import { EXIT_USER, VERSION_REGEX } from "../constants.js";
-import {
-  getBranchTypeMeta,
-  getPrefixForType,
-  resolveConfig,
-} from "../config.js";
 import { BranchNotFoundError } from "../errors.js";
 import {
   assertNoRebaseOrMerge,
@@ -27,6 +22,7 @@ import {
   tagExists,
 } from "../git.js";
 import { hint, success } from "../out.js";
+import type { BranchType, ParsedArgs } from "../types.js";
 
 /** Normalizes version to vX.Y.Z for tag name. */
 function normalizeTagVersion(version: string): string {
@@ -39,7 +35,7 @@ function normalizeTagVersion(version: string): string {
  */
 async function getWorkflowBranches(
   cwd: string,
-  prefixes: Record<BranchType, string>
+  prefixes: Record<BranchType, string>,
 ): Promise<string[]> {
   const all = await branchList(cwd, { dryRun: false, verbose: false });
   const workflow: string[] = [];
@@ -59,16 +55,9 @@ async function getWorkflowBranches(
  */
 function parseBranchTypeAndVersion(
   branchName: string,
-  prefixes: Record<BranchType, string>
+  prefixes: Record<BranchType, string>,
 ): { type: BranchType; version?: string } | null {
-  for (const type of [
-    "release",
-    "hotfix",
-    "feature",
-    "bugfix",
-    "chore",
-    "spike",
-  ] as BranchType[]) {
+  for (const type of ["release", "hotfix", "feature", "bugfix", "chore", "spike"] as BranchType[]) {
     const prefix = prefixes[type];
     if (prefix && branchName.startsWith(prefix)) {
       const suffix = branchName.slice(prefix.length);
@@ -93,7 +82,7 @@ export async function run(args: ParsedArgs): Promise<void> {
   const config = resolveConfig(
     repoRoot,
     { main: args.main, dev: args.dev, remote: args.remote },
-    { verbose: args.verbose }
+    { verbose: args.verbose },
   );
 
   const opts: { dryRun: boolean; verbose: boolean } = {
@@ -106,9 +95,7 @@ export async function run(args: ParsedArgs): Promise<void> {
   // Resolve branch to finish (and guard main/dev early so we can error before picker)
   let branchToFinish: string;
   const explicitBranch =
-    typeof args.branch === "string" && args.branch.trim() !== ""
-      ? args.branch.trim()
-      : undefined;
+    typeof args.branch === "string" && args.branch.trim() !== "" ? args.branch.trim() : undefined;
 
   if (explicitBranch) {
     branchToFinish = explicitBranch;
@@ -127,7 +114,7 @@ export async function run(args: ParsedArgs): Promise<void> {
     const current = await getCurrentBranch(repoRoot, opts);
     if (!current) {
       console.error(
-        "gflows finish: HEAD is detached. Checkout a branch or specify one with -B <name>."
+        "gflows finish: HEAD is detached. Checkout a branch or specify one with -B <name>.",
       );
       process.exit(EXIT_USER);
     }
@@ -137,7 +124,7 @@ export async function run(args: ParsedArgs): Promise<void> {
   // Refuse finish on main or dev
   if (branchToFinish === config.main || branchToFinish === config.dev) {
     console.error(
-      `gflows finish: cannot finish the long-lived branch '${branchToFinish}'. Finish a workflow branch (feature, bugfix, etc.) instead.`
+      `gflows finish: cannot finish the long-lived branch '${branchToFinish}'. Finish a workflow branch (feature, bugfix, etc.) instead.`,
     );
     process.exit(2);
   }
@@ -147,13 +134,13 @@ export async function run(args: ParsedArgs): Promise<void> {
   const type: BranchType | undefined = args.type ?? parsed?.type ?? undefined;
   if (!type) {
     console.error(
-      `gflows finish: cannot determine branch type for '${branchToFinish}'. Specify type (e.g. gflows finish feature) or use a branch name with a known prefix.`
+      `gflows finish: cannot determine branch type for '${branchToFinish}'. Specify type (e.g. gflows finish feature) or use a branch name with a known prefix.`,
     );
     process.exit(EXIT_USER);
   }
   if (parsed && parsed.type !== type) {
     console.error(
-      `gflows finish: branch '${branchToFinish}' matches type '${parsed.type}', but '${type}' was specified.`
+      `gflows finish: branch '${branchToFinish}' matches type '${parsed.type}', but '${type}' was specified.`,
     );
     process.exit(EXIT_USER);
   }
@@ -175,7 +162,7 @@ export async function run(args: ParsedArgs): Promise<void> {
     }
   } else if (meta.tagOnFinish && !version) {
     console.error(
-      `gflows finish: release/hotfix branch '${branchToFinish}' has no valid version segment. Use format release/vX.Y.Z or hotfix/vX.Y.Z.`
+      `gflows finish: release/hotfix branch '${branchToFinish}' has no valid version segment. Use format release/vX.Y.Z or hotfix/vX.Y.Z.`,
     );
     process.exit(EXIT_USER);
   }
@@ -184,38 +171,33 @@ export async function run(args: ParsedArgs): Promise<void> {
   const branches = await branchList(repoRoot, { ...opts, dryRun: false });
   if (!branches.includes(branchToFinish)) {
     throw new BranchNotFoundError(
-      `Branch '${branchToFinish}' not found. Specify an existing local branch with -B <name>.`
+      `Branch '${branchToFinish}' not found. Specify an existing local branch with -B <name>.`,
     );
   }
 
   const noFf = args.noFf;
+  if (meta.mergeTarget === "dev") {
+    await checkout(repoRoot, config.dev, opts);
+    await merge(repoRoot, branchToFinish, { ...opts, noFf });
+  } else {
+    // main-then-dev: merge into main first, then merge main into dev
+    await checkout(repoRoot, config.main, opts);
+    await merge(repoRoot, branchToFinish, { ...opts, noFf });
 
-  try {
-    if (meta.mergeTarget === "dev") {
-      await checkout(repoRoot, config.dev, opts);
-      await merge(repoRoot, branchToFinish, { ...opts, noFf });
-    } else {
-      // main-then-dev: merge into main first, then merge main into dev
-      await checkout(repoRoot, config.main, opts);
-      await merge(repoRoot, branchToFinish, { ...opts, noFf });
-
-      if (meta.tagOnFinish && version && !args.noTag) {
-        const tagName = normalizeTagVersion(version);
-        await tag(repoRoot, tagName, {
-          ...opts,
-          sign: args.signTag,
-          tagMessage: args.tagMessage,
-        });
-        if (!args.quiet && !args.dryRun) {
-          success(`gflows: created tag '${tagName}'.`);
-        }
+    if (meta.tagOnFinish && version && !args.noTag) {
+      const tagName = normalizeTagVersion(version);
+      await tag(repoRoot, tagName, {
+        ...opts,
+        sign: args.signTag,
+        tagMessage: args.tagMessage,
+      });
+      if (!args.quiet && !args.dryRun) {
+        success(`gflows: created tag '${tagName}'.`);
       }
-
-      await checkout(repoRoot, config.dev, opts);
-      await merge(repoRoot, config.main, { ...opts, noFf });
     }
-  } catch (err) {
-    throw err;
+
+    await checkout(repoRoot, config.dev, opts);
+    await merge(repoRoot, config.main, { ...opts, noFf });
   }
 
   // Optional: delete the finished branch
@@ -263,16 +245,10 @@ export async function run(args: ParsedArgs): Promise<void> {
     if (meta.mergeTarget === "main-then-dev") {
       refsToPush.push(config.main);
     }
-    const pushCode = await push(
-      repoRoot,
-      remote,
-      refsToPush,
-      didCreateTag,
-      opts
-    );
+    const pushCode = await push(repoRoot, remote, refsToPush, didCreateTag, opts);
     if (pushCode !== 0) {
       console.error(
-        "gflows: merge and tag succeeded locally, but push failed. Retry with `git push` or `gflows finish ... --push`."
+        "gflows: merge and tag succeeded locally, but push failed. Retry with `git push` or `gflows finish ... --push`.",
       );
       process.exit(2);
     }

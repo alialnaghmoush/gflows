@@ -5,8 +5,8 @@
  * @module commands/completion
  */
 
-import type { ParsedArgs } from "../types.js";
 import { EXIT_USER } from "../constants.js";
+import type { ParsedArgs } from "../types.js";
 
 const COMMANDS = [
   "init",
@@ -22,14 +22,7 @@ const COMMANDS = [
   "version",
 ];
 
-const BRANCH_TYPES = [
-  "feature",
-  "bugfix",
-  "chore",
-  "release",
-  "hotfix",
-  "spike",
-];
+const BRANCH_TYPES = ["feature", "bugfix", "chore", "release", "hotfix", "spike"];
 
 const COMPLETION_SHELLS = ["bash", "zsh", "fish"] as const;
 
@@ -46,7 +39,7 @@ function bashScript(): string {
 _gflows() {
   local cur prev words cword cmd_idx cmd
   words=(${D}COMP_WORDS[@]})
-  cword=\$COMP_CWORD
+  cword=$COMP_CWORD
   cur="${D}words[cword]:-}"
   prev="${D}words[cword-1]:-}"
 
@@ -72,58 +65,58 @@ _gflows() {
         break
       fi
     done
-    if [[ -n "\$path" ]]; then
-      gflows -C "\$path" list 2>/dev/null
+    if [[ -n "$path" ]]; then
+      gflows -C "$path" list 2>/dev/null
     else
       gflows list 2>/dev/null
     fi
   }
 
   # Completing -C/--path value: suggest directories
-  if [[ "\$prev" == "-C" ]] || [[ "\$prev" == "--path" ]]; then
+  if [[ "$prev" == "-C" ]] || [[ "$prev" == "--path" ]]; then
     compopt -o dirnames 2>/dev/null
-    COMPREPLY=($(compgen -d -S / -- "\$cur"))
+    COMPREPLY=($(compgen -d -S / -- "$cur"))
     return
   fi
 
   # First positional: command
   if (( cword == cmd_idx )); then
-    COMPREPLY=($(compgen -W "${COMMANDS.join(" ")}" -- "\$cur"))
+    COMPREPLY=($(compgen -W "${COMMANDS.join(" ")}" -- "$cur"))
     return
   fi
 
   # After command: type/name/branches/shell/bump by command
   case "$cmd" in
     completion)
-      COMPREPLY=($(compgen -W "${COMPLETION_SHELLS.join(" ")}" -- "\$cur"))
+      COMPREPLY=($(compgen -W "${COMPLETION_SHELLS.join(" ")}" -- "$cur"))
       ;;
     start)
       if (( cword == cmd_idx + 1 )); then
-        COMPREPLY=($(compgen -W "${BRANCH_TYPES.join(" ")}" -- "\$cur"))
+        COMPREPLY=($(compgen -W "${BRANCH_TYPES.join(" ")}" -- "$cur"))
       else
         COMPREPLY=()
       fi
       ;;
     finish)
-      if [[ "\$prev" == "-B" ]] || [[ "\$prev" == "--branch" ]]; then
-        COMPREPLY=($(compgen -W "$(_gflows_path)" -- "\$cur"))
+      if [[ "$prev" == "-B" ]] || [[ "$prev" == "--branch" ]]; then
+        COMPREPLY=($(compgen -W "$(_gflows_path)" -- "$cur"))
       elif (( cword == cmd_idx + 1 )); then
-        COMPREPLY=($(compgen -W "${BRANCH_TYPES.join(" ")}" -- "\$cur"))
+        COMPREPLY=($(compgen -W "${BRANCH_TYPES.join(" ")}" -- "$cur"))
       else
         COMPREPLY=()
       fi
       ;;
     list)
-      COMPREPLY=($(compgen -W "${BRANCH_TYPES.join(" ")}" -- "\$cur"))
+      COMPREPLY=($(compgen -W "${BRANCH_TYPES.join(" ")}" -- "$cur"))
       ;;
     switch|delete)
-      COMPREPLY=($(compgen -W "$(_gflows_path)" -- "\$cur"))
+      COMPREPLY=($(compgen -W "$(_gflows_path)" -- "$cur"))
       ;;
     bump)
       if (( cword == cmd_idx + 1 )); then
-        COMPREPLY=($(compgen -W "${BUMP_DIRECTIONS.join(" ")}" -- "\$cur"))
+        COMPREPLY=($(compgen -W "${BUMP_DIRECTIONS.join(" ")}" -- "$cur"))
       elif (( cword == cmd_idx + 2 )); then
-        COMPREPLY=($(compgen -W "${BUMP_TYPES.join(" ")}" -- "\$cur"))
+        COMPREPLY=($(compgen -W "${BUMP_TYPES.join(" ")}" -- "$cur"))
       else
         COMPREPLY=()
       fi
@@ -169,7 +162,7 @@ _gflows() {
 
   case $state in
     args)
-      cur=\$words[CURRENT]
+      cur=$words[CURRENT]
       cmd_idx=1
       while (( cmd_idx < CURRENT )); do
         if [[ "${D}words[cmd_idx]}" == "-C" ]] || [[ "${D}words[cmd_idx]}" == "--path" ]]; then
@@ -190,7 +183,7 @@ _gflows() {
           ;;
         finish)
           if [[ "${D}words[CURRENT-1]}" == "-B" ]] || [[ "${D}words[CURRENT-1]}" == "--branch" ]]; then
-            _values "branch" \$(_gflows_list_branches)
+            _values "branch" $(_gflows_list_branches)
           else
             _values "type" ${BRANCH_TYPES.map((t) => `"${t}"`).join(" ")}
           fi
@@ -199,7 +192,7 @@ _gflows() {
           _values "type" ${BRANCH_TYPES.map((t) => `"${t}"`).join(" ")}
           ;;
         switch|delete)
-          _values "branch" \$(_gflows_list_branches)
+          _values "branch" $(_gflows_list_branches)
           ;;
         bump)
           if [[ "${D}words[CURRENT-1]}" == "up" ]] || [[ "${D}words[CURRENT-1]}" == "down" ]]; then
@@ -326,9 +319,7 @@ complete -c gflows -f -n "__fish_seen_subcommand_from ${COMMANDS.join(" ")}" -l 
 export async function run(args: ParsedArgs): Promise<void> {
   const shell = args.completionShell;
   if (!shell) {
-    console.error(
-      "gflows: completion requires a shell. Use: gflows completion bash | zsh | fish"
-    );
+    console.error("gflows: completion requires a shell. Use: gflows completion bash | zsh | fish");
     process.exit(EXIT_USER);
   }
 

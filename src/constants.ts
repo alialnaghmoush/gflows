@@ -35,4 +35,4 @@ export const DEFAULT_PREFIXES = {
 export const VERSION_REGEX = /^v?\d+\.\d+\.\d+$/;
 
 /** Characters invalid in Git ref names (branch names). */
-export const INVALID_BRANCH_CHARS = /\.\.|[\s~^?:*\[\]\\]/;
+export const INVALID_BRANCH_CHARS = /\.\.|[\s~^?:*[\]\\]/;

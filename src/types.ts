@@ -4,13 +4,7 @@
  */
 
 /** Supported workflow branch types (core + optional spike). */
-export type BranchType =
-  | "feature"
-  | "bugfix"
-  | "chore"
-  | "release"
-  | "hotfix"
-  | "spike";
+export type BranchType = "feature" | "bugfix" | "chore" | "release" | "hotfix" | "spike";
 
 /** Short flag for each branch type when used as CLI type selector. */
 export const BRANCH_TYPE_SHORTS: Record<BranchType, string> = {

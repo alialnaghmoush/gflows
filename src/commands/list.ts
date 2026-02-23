@@ -5,22 +5,13 @@
  * @module commands/list
  */
 
-import type { BranchType } from "../types.js";
-import type { ParsedArgs } from "../types.js";
-import type { ResolvedConfig } from "../types.js";
 import { resolveConfig } from "../config.js";
 import { NotRepoError } from "../errors.js";
 import { branchList, fetch, resolveRepoRoot } from "../git.js";
 import { hint } from "../out.js";
+import type { BranchType, ParsedArgs, ResolvedConfig } from "../types.js";
 
-const BRANCH_TYPES: BranchType[] = [
-  "feature",
-  "bugfix",
-  "chore",
-  "release",
-  "hotfix",
-  "spike",
-];
+const BRANCH_TYPES: BranchType[] = ["feature", "bugfix", "chore", "release", "hotfix", "spike"];
 
 /**
  * Returns branch names that match any workflow prefix. If typeFilter is set,
@@ -29,13 +20,11 @@ const BRANCH_TYPES: BranchType[] = [
 function filterWorkflowBranches(
   allBranches: string[],
   config: ResolvedConfig,
-  typeFilter: BranchType | undefined
+  typeFilter: BranchType | undefined,
 ): string[] {
   const { main, dev, prefixes } = config;
   const prefixesToMatch =
-    typeFilter !== undefined
-      ? [prefixes[typeFilter]]
-      : BRANCH_TYPES.map((t) => prefixes[t]);
+    typeFilter !== undefined ? [prefixes[typeFilter]] : BRANCH_TYPES.map((t) => prefixes[t]);
 
   return allBranches.filter((b) => {
     if (b === main || b === dev) return false;
@@ -61,7 +50,7 @@ export async function run(args: ParsedArgs): Promise<void> {
   const config = resolveConfig(
     root,
     { main: args.main, dev: args.dev, remote: args.remote },
-    { verbose: !!verbose }
+    { verbose: !!verbose },
   );
 
   if (includeRemote && !dryRun) {
@@ -76,16 +65,10 @@ export async function run(args: ParsedArgs): Promise<void> {
     verbose: !!verbose,
   });
 
-  const workflowBranches = filterWorkflowBranches(
-    allBranches,
-    config,
-    typeFilter
-  );
+  const workflowBranches = filterWorkflowBranches(allBranches, config, typeFilter);
 
   // Show main and dev first (when present), then workflow branches
-  const mainAndDev = [config.main, config.dev].filter((b) =>
-    allBranches.includes(b)
-  );
+  const mainAndDev = [config.main, config.dev].filter((b) => allBranches.includes(b));
   const sorted = [...mainAndDev, ...[...workflowBranches].sort()];
 
   for (const b of sorted) {

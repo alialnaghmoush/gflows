@@ -3,38 +3,24 @@
  * @module commands/delete
  */
 
-import type { BranchType } from "../types.js";
-import type { ParsedArgs } from "../types.js";
 import { resolveConfig } from "../config.js";
 import { EXIT_OK, EXIT_USER } from "../constants.js";
 import { CannotDeleteMainOrDevError, NotRepoError } from "../errors.js";
-import {
-  branchList,
-  deleteBranch,
-  resolveRepoRoot,
-} from "../git.js";
+import { branchList, deleteBranch, resolveRepoRoot } from "../git.js";
 import { hint, success } from "../out.js";
+import type { BranchType, ParsedArgs } from "../types.js";
 
-const BRANCH_TYPES: BranchType[] = [
-  "feature",
-  "bugfix",
-  "chore",
-  "release",
-  "hotfix",
-  "spike",
-];
+const BRANCH_TYPES: BranchType[] = ["feature", "bugfix", "chore", "release", "hotfix", "spike"];
 
 /**
  * Returns local branch names that match any workflow prefix (feature/, bugfix/, etc.).
  */
 function getWorkflowBranches(
   allBranches: string[],
-  prefixes: Record<BranchType, string>
+  prefixes: Record<BranchType, string>,
 ): string[] {
   const prefixed = BRANCH_TYPES.map((t) => prefixes[t]).filter(Boolean);
-  return allBranches.filter((b) =>
-    prefixed.some((p) => p && b.startsWith(p))
-  );
+  return allBranches.filter((b) => prefixed.some((p) => p && b.startsWith(p)));
 }
 
 /**
@@ -58,16 +44,12 @@ export async function run(args: ParsedArgs): Promise<void> {
   });
   const { main, dev, prefixes } = config;
 
-  const fromPositionals = (rawBranchNames ?? [])
-    .map((s) => s.trim())
-    .filter(Boolean);
+  const fromPositionals = (rawBranchNames ?? []).map((s) => s.trim()).filter(Boolean);
 
   if (fromPositionals.length > 0) {
     for (const branch of fromPositionals) {
       if (branch === main || branch === dev) {
-        throw new CannotDeleteMainOrDevError(
-          `Cannot delete the long-lived branch '${branch}'.`
-        );
+        throw new CannotDeleteMainOrDevError(`Cannot delete the long-lived branch '${branch}'.`);
       }
     }
     for (const branch of fromPositionals) {
@@ -89,7 +71,7 @@ export async function run(args: ParsedArgs): Promise<void> {
   const isTTY = typeof process.stdin.isTTY === "boolean" && process.stdin.isTTY;
   if (!isTTY) {
     console.error(
-      "gflows delete: no branch name(s) given and stdin is not a TTY. Pass branch name(s) (e.g. gflows delete feature/my-branch) or run from an interactive terminal."
+      "gflows delete: no branch name(s) given and stdin is not a TTY. Pass branch name(s) (e.g. gflows delete feature/my-branch) or run from an interactive terminal.",
     );
     process.exit(EXIT_USER);
   }
@@ -103,7 +85,7 @@ export async function run(args: ParsedArgs): Promise<void> {
   if (workflowBranches.length === 0) {
     if (!quiet) {
       console.error(
-        "No workflow branches to delete. Create one with 'gflows start <type> <name>'."
+        "No workflow branches to delete. Create one with 'gflows start <type> <name>'.",
       );
     }
     process.exit(EXIT_USER);
@@ -124,9 +106,7 @@ export async function run(args: ParsedArgs): Promise<void> {
 
   for (const branch of chosen) {
     if (branch === main || branch === dev) {
-      throw new CannotDeleteMainOrDevError(
-        `Cannot delete the long-lived branch '${branch}'.`
-      );
+      throw new CannotDeleteMainOrDevError(`Cannot delete the long-lived branch '${branch}'.`);
     }
   }
 

@@ -66,11 +66,19 @@ export function banner(title: string, lines?: string[]): void {
   const top = `  ${c(BOX.TL)}${c(BOX.H.repeat(BANNER_INNER_WIDTH))}${c(BOX.TR)}`;
   const bottom = `  ${c(BOX.BL)}${c(BOX.H.repeat(BANNER_INNER_WIDTH))}${c(BOX.BR)}`;
   const row = (text: string) =>
-    "  " + c(BOX.V) + "  " + text + " ".repeat(Math.max(0, inner - text.length)) + "  " + c(BOX.V);
+    `  ${c(BOX.V)}  ${text}${" ".repeat(Math.max(0, inner - text.length))}  ${c(BOX.V)}`;
   const titleDisplay = color ? `${CYAN}${BOLD}${title}${RESET}` : title;
   console.log("");
   console.log(top);
-  console.log("  " + c(BOX.V) + "  " + titleDisplay + " ".repeat(Math.max(0, inner - title.length)) + "  " + c(BOX.V));
+  console.log(
+    "  " +
+      c(BOX.V) +
+      "  " +
+      titleDisplay +
+      " ".repeat(Math.max(0, inner - title.length)) +
+      "  " +
+      c(BOX.V),
+  );
   if (lines?.length) {
     for (const line of lines) {
       console.log(line === "" ? row("") : row(line));

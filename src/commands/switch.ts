@@ -3,38 +3,24 @@
  * @module commands/switch
  */
 
-import type { BranchType } from "../types.js";
-import type { ParsedArgs } from "../types.js";
 import { resolveConfig } from "../config.js";
 import { EXIT_OK, EXIT_USER } from "../constants.js";
 import { NotRepoError } from "../errors.js";
-import {
-  branchList,
-  checkout,
-  resolveRepoRoot,
-} from "../git.js";
+import { branchList, checkout, resolveRepoRoot } from "../git.js";
 import { hint, success } from "../out.js";
+import type { BranchType, ParsedArgs } from "../types.js";
 
-const BRANCH_TYPES: BranchType[] = [
-  "feature",
-  "bugfix",
-  "chore",
-  "release",
-  "hotfix",
-  "spike",
-];
+const BRANCH_TYPES: BranchType[] = ["feature", "bugfix", "chore", "release", "hotfix", "spike"];
 
 /**
  * Returns local branch names that match any workflow prefix (feature/, bugfix/, etc.).
  */
 function getWorkflowBranches(
   allBranches: string[],
-  prefixes: Record<BranchType, string>
+  prefixes: Record<BranchType, string>,
 ): string[] {
   const prefixed = BRANCH_TYPES.map((t) => prefixes[t]).filter(Boolean);
-  return allBranches.filter((b) =>
-    prefixed.some((p) => p && b.startsWith(p))
-  );
+  return allBranches.filter((b) => prefixed.some((p) => p && b.startsWith(p)));
 }
 
 /**
@@ -74,7 +60,7 @@ export async function run(args: ParsedArgs): Promise<void> {
   const isTTY = typeof process.stdin.isTTY === "boolean" && process.stdin.isTTY;
   if (!isTTY) {
     console.error(
-      "gflows switch: no branch name given and stdin is not a TTY. Pass a branch name (e.g. gflows switch feature/my-branch) or run from an interactive terminal."
+      "gflows switch: no branch name given and stdin is not a TTY. Pass a branch name (e.g. gflows switch feature/my-branch) or run from an interactive terminal.",
     );
     process.exit(EXIT_USER);
   }
@@ -82,9 +68,7 @@ export async function run(args: ParsedArgs): Promise<void> {
   const allLocal = await branchList(root, { dryRun, verbose: args.verbose });
   const workflowBranches = getWorkflowBranches(allLocal, config.prefixes);
   // Include main and dev so we always show whatever branches exist
-  const mainAndDev = [config.main, config.dev].filter((b) =>
-    allLocal.includes(b)
-  );
+  const mainAndDev = [config.main, config.dev].filter((b) => allLocal.includes(b));
   const choices = [...mainAndDev, ...workflowBranches];
 
   if (choices.length === 0) {

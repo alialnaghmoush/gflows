@@ -36,7 +36,9 @@ export class BranchNotFoundError extends GflowsError {
 
 /** Thrown when start is run with uncommitted changes and without --force. */
 export class DirtyWorkingTreeError extends GflowsError {
-  constructor(message = "Working tree has uncommitted changes. Commit or stash them, or use --force.") {
+  constructor(
+    message = "Working tree has uncommitted changes. Commit or stash them, or use --force.",
+  ) {
     super(message, EXIT_GIT);
   }
 }
@@ -51,7 +53,7 @@ export class DetachedHeadError extends GflowsError {
 /** Thrown when a rebase or merge is in progress; user must complete or abort first. */
 export class RebaseMergeInProgressError extends GflowsError {
   constructor(
-    message = "A rebase or merge is in progress. Complete or abort it before running this command."
+    message = "A rebase or merge is in progress. Complete or abort it before running this command.",
   ) {
     super(message, EXIT_GIT);
   }

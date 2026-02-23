@@ -6,6 +6,7 @@
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { DEFAULT_DEV, DEFAULT_MAIN, DEFAULT_PREFIXES, DEFAULT_REMOTE } from "./constants.js";
 import type {
   BranchPrefixes,
   BranchType,
@@ -13,12 +14,6 @@ import type {
   GflowsConfigFile,
   ResolvedConfig,
 } from "./types.js";
-import {
-  DEFAULT_DEV,
-  DEFAULT_MAIN,
-  DEFAULT_PREFIXES,
-  DEFAULT_REMOTE,
-} from "./constants.js";
 
 const CONFIG_FILE = ".gflows.json";
 const PACKAGE_JSON = "package.json";
@@ -99,10 +94,22 @@ function normalizeConfigFile(data: unknown): GflowsConfigFile | null {
   if (typeof obj.remote === "string" && obj.remote.trim() !== "") {
     out.remote = obj.remote.trim();
   }
-  if (obj.prefixes !== undefined && obj.prefixes !== null && typeof obj.prefixes === "object" && !Array.isArray(obj.prefixes)) {
+  if (
+    obj.prefixes !== undefined &&
+    obj.prefixes !== null &&
+    typeof obj.prefixes === "object" &&
+    !Array.isArray(obj.prefixes)
+  ) {
     const prefs = obj.prefixes as Record<string, unknown>;
     const prefixes: BranchPrefixes = {};
-    const keys: (keyof BranchPrefixes)[] = ["feature", "bugfix", "chore", "release", "hotfix", "spike"];
+    const keys: (keyof BranchPrefixes)[] = [
+      "feature",
+      "bugfix",
+      "chore",
+      "release",
+      "hotfix",
+      "spike",
+    ];
     for (const k of keys) {
       const v = prefs[k];
       if (typeof v === "string" && v.trim() !== "") {
@@ -123,10 +130,17 @@ function normalizeConfigFile(data: unknown): GflowsConfigFile | null {
 function mergePrefixes(overrides?: BranchPrefixes): Required<BranchPrefixes> {
   const result: Required<BranchPrefixes> = { ...DEFAULT_PREFIXES };
   if (!overrides) return result;
-  const keys: (keyof BranchPrefixes)[] = ["feature", "bugfix", "chore", "release", "hotfix", "spike"];
+  const keys: (keyof BranchPrefixes)[] = [
+    "feature",
+    "bugfix",
+    "chore",
+    "release",
+    "hotfix",
+    "spike",
+  ];
   for (const k of keys) {
-    if (typeof overrides[k] === "string" && overrides[k]!.trim() !== "") {
-      result[k] = overrides[k]!.trim();
+    if (typeof overrides[k] === "string" && overrides[k]?.trim() !== "") {
+      result[k] = overrides[k]?.trim();
     }
   }
   return result;
@@ -144,7 +158,7 @@ function mergePrefixes(overrides?: BranchPrefixes): Required<BranchPrefixes> {
 export function resolveConfig(
   dir: string,
   cliOverrides?: ConfigCliOverrides,
-  options?: ResolveConfigOptions
+  options?: ResolveConfigOptions,
 ): ResolvedConfig {
   const verbose = options?.verbose === true;
 
@@ -180,10 +194,7 @@ export function resolveConfig(
  * @param dir - Repo root directory.
  * @param partial - Keys to set (main, dev, remote, prefixes); omitted keys are left unchanged.
  */
-export function writeConfigFile(
-  dir: string,
-  partial: Partial<GflowsConfigFile>
-): void {
+export function writeConfigFile(dir: string, partial: Partial<GflowsConfigFile>): void {
   const path = join(dir, CONFIG_FILE);
   let existing: GflowsConfigFile = {};
   if (existsSync(path)) {
@@ -206,10 +217,22 @@ export function writeConfigFile(
   if (typeof partial.remote === "string" && partial.remote.trim() !== "") {
     merged.remote = partial.remote.trim();
   }
-  if (partial.prefixes !== undefined && partial.prefixes !== null && typeof partial.prefixes === "object" && !Array.isArray(partial.prefixes)) {
+  if (
+    partial.prefixes !== undefined &&
+    partial.prefixes !== null &&
+    typeof partial.prefixes === "object" &&
+    !Array.isArray(partial.prefixes)
+  ) {
     const prefs = partial.prefixes as Record<string, unknown>;
     const prefixes: BranchPrefixes = { ...(merged.prefixes ?? {}) };
-    const keys: (keyof BranchPrefixes)[] = ["feature", "bugfix", "chore", "release", "hotfix", "spike"];
+    const keys: (keyof BranchPrefixes)[] = [
+      "feature",
+      "bugfix",
+      "chore",
+      "release",
+      "hotfix",
+      "spike",
+    ];
     for (const k of keys) {
       const v = prefs[k];
       if (typeof v === "string" && v.trim() !== "") {
@@ -218,16 +241,13 @@ export function writeConfigFile(
     }
     merged.prefixes = prefixes;
   }
-  writeFileSync(path, JSON.stringify(merged, null, 2) + "\n", "utf-8");
+  writeFileSync(path, `${JSON.stringify(merged, null, 2)}\n`, "utf-8");
 }
 
 /**
  * Returns the branch name prefix for a given branch type from resolved config.
  */
-export function getPrefixForType(
-  config: ResolvedConfig,
-  type: BranchType
-): string {
+export function getPrefixForType(config: ResolvedConfig, type: BranchType): string {
   return config.prefixes[type] ?? DEFAULT_PREFIXES[type];
 }
 

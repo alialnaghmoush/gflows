@@ -32,7 +32,7 @@ Types: feature (-f), bugfix (-b), chore (-c), release (-r), hotfix (-x), spike (
 
 Common flags:
   -p, --push           Push after init/start/finish
-  -P, --no-push        Do not push (finish: prompts "Do you want to push?" when neither -p nor -P)
+  -P, --no-push        Do not push (init/start: push is default; finish: prompts when neither -p nor -P)
   --main <name>        Main branch (init: persist to .gflows.json)
   --dev <name>         Dev branch (init: persist to .gflows.json)
   -R, --remote <name>  Remote for push (init: persist to .gflows.json)

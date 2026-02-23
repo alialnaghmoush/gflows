@@ -1,6 +1,6 @@
 {
   "name": "gflows",
-  "version": "0.1.13",
+  "version": "0.1.14",
   "description": "A lightweight CLI for consistent Git branching workflows (main + dev, feature/bugfix/chore/release/hotfix).",
   "license": "MIT",
   "type": "module",
@@ -10,7 +10,10 @@
   },
   "scripts": {
     "test": "bun test",
-    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check .",
+    "lint:fix": "biome check . --write",
+    "format": "biome format . --write",
     "gflows": "bun run src/cli.ts",
     "publish:all": "bun run scripts/publish.ts",
     "publish:npm": "bun run scripts/publish.ts -- --npm-only",
@@ -33,6 +36,7 @@
     "@inquirer/prompts": "^8"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.4.4",
     "@types/bun": "latest",
     "typescript": "^5"
   }

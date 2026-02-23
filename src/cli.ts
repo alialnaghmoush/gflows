@@ -9,9 +9,9 @@
 import { existsSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
-import type { Command, BranchType, ParsedArgs } from "./types.js";
-import { EXIT_OK, EXIT_USER, EXIT_GIT } from "./constants.js";
+import { EXIT_GIT, EXIT_OK, EXIT_USER } from "./constants.js";
 import { exitCodeForError } from "./errors.js";
+import type { BranchType, Command, ParsedArgs } from "./types.js";
 
 /** Last parsed args, set at start of run(); used by catch/rejection to respect -v for stack trace. */
 let lastParsedArgs: ParsedArgs | null = null;
@@ -30,14 +30,7 @@ const COMMANDS: Command[] = [
   "version",
 ];
 
-const BRANCH_TYPES: BranchType[] = [
-  "feature",
-  "bugfix",
-  "chore",
-  "release",
-  "hotfix",
-  "spike",
-];
+const BRANCH_TYPES: BranchType[] = ["feature", "bugfix", "chore", "release", "hotfix", "spike"];
 
 /** Short flag → command (when used as main command). */
 const SHORT_TO_COMMAND: Record<string, Command> = {
@@ -80,6 +73,7 @@ function buildParseArgsOptions() {
       // Common
       push: { type: "boolean" as const, short: "p" },
       noPush: { type: "boolean" as const, short: "P" },
+      "no-push": { type: "boolean" as const },
       main: { type: "string" as const },
       dev: { type: "string" as const },
       remote: { type: "string" as const, short: "R" },
@@ -147,27 +141,33 @@ function editDistance(a: string, b: string): number {
   const m = a.length;
   const n = b.length;
   const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
-  for (let i = 0; i <= m; i++) dp[i]![0] = i;
-  for (let j = 0; j <= n; j++) dp[0]![j] = j;
+  for (let i = 0; i <= m; i++) {
+    const row = dp[i];
+    if (row) row[0] = i;
+  }
+  for (let j = 0; j <= n; j++) {
+    const row = dp[0];
+    if (row) row[j] = j;
+  }
   for (let i = 1; i <= m; i++) {
     for (let j = 1; j <= n; j++) {
       const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      dp[i]![j] = Math.min(
-        dp[i - 1]![j]! + 1,
-        dp[i]![j - 1]! + 1,
-        dp[i - 1]![j - 1]! + cost
-      );
+      const v1 = dp[i - 1]?.[j] ?? 0;
+      const v2 = dp[i]?.[j - 1] ?? 0;
+      const v3 = dp[i - 1]?.[j - 1] ?? 0;
+      const rowI = dp[i];
+      if (rowI) rowI[j] = Math.min(v1 + 1, v2 + 1, v3 + cost);
     }
   }
-  return dp[m]![n]!;
+  return dp[m]?.[n] ?? 0;
 }
 
 /** Resolve command from positionals and short flags. Short wins if both present. */
 function resolveCommand(
   positionals: string[],
-  values: Record<string, string | boolean | undefined>
+  values: Record<string, string | boolean | undefined>,
 ): Command | undefined {
-  for (const [short, cmd] of Object.entries(SHORT_TO_COMMAND)) {
+  for (const [_short, cmd] of Object.entries(SHORT_TO_COMMAND)) {
     const key = cmd === "delete" ? "delete" : cmd;
     if (values[key] === true) return cmd as Command;
   }
@@ -182,7 +182,7 @@ function resolveCommand(
 function resolveType(
   command: Command,
   positionals: string[],
-  values: Record<string, string | boolean | undefined>
+  values: Record<string, string | boolean | undefined>,
 ): BranchType | undefined {
   if (command !== "start" && command !== "finish" && command !== "list") {
     return undefined;
@@ -218,7 +218,7 @@ function resolveType(
 function resolveName(
   command: Command,
   positionals: string[],
-  values: Record<string, string | boolean | undefined>
+  values: Record<string, string | boolean | undefined>,
 ): string | undefined {
   const branch = values.branch;
   if (typeof branch === "string" && branch.trim() !== "") {
@@ -239,7 +239,7 @@ function resolveName(
   }
   if (command === "bump") {
     const dir = positionals[skip];
-    const typ = positionals[skip + 1];
+    const _typ = positionals[skip + 1];
     if (dir === "up" || dir === "down") {
       return dir;
     }
@@ -254,7 +254,7 @@ function resolveName(
 /** Resolve bump direction and type from positionals (bump [up|down] [patch|minor|major]). */
 function resolveBump(
   positionals: string[],
-  values: Record<string, string | boolean | undefined>
+  _values: Record<string, string | boolean | undefined>,
 ): { direction?: "up" | "down"; type?: "patch" | "minor" | "major" } {
   const skip = positionals[0] === "bump" ? 1 : 0;
   const a = positionals[skip];
@@ -304,9 +304,7 @@ export function parse(argv: string[] = Bun.argv.slice(2)): ParsedArgs {
   // -r context: for list → includeRemote; for start/finish → already used as type release
   const includeRemote =
     command === "list"
-      ? (v.includeRemote === true ||
-         v["include-remote"] === true ||
-         v.release === true)
+      ? v.includeRemote === true || v["include-remote"] === true || v.release === true
       : false;
 
   let completionShell: "bash" | "zsh" | "fish" | undefined;
@@ -324,7 +322,7 @@ export function parse(argv: string[] = Bun.argv.slice(2)): ParsedArgs {
     bumpDirection,
     bumpType,
     push: v.push === true,
-    noPush: v.noPush === true,
+    noPush: v.noPush === true || v["no-push"] === true,
     main: typeof v.main === "string" && v.main.trim() !== "" ? v.main.trim() : undefined,
     dev: typeof v.dev === "string" && v.dev.trim() !== "" ? v.dev.trim() : undefined,
     remote: typeof v.remote === "string" ? v.remote : undefined,

@@ -4,15 +4,15 @@
 
 import { describe, expect, test } from "bun:test";
 import {
+  DEFAULT_DEV,
+  DEFAULT_MAIN,
+  DEFAULT_PREFIXES,
+  DEFAULT_REMOTE,
+  EXIT_GIT,
   EXIT_OK,
   EXIT_USER,
-  EXIT_GIT,
-  DEFAULT_MAIN,
-  DEFAULT_DEV,
-  DEFAULT_REMOTE,
-  DEFAULT_PREFIXES,
-  VERSION_REGEX,
   INVALID_BRANCH_CHARS,
+  VERSION_REGEX,
 } from "../src/constants.ts";
 
 describe("constants", () => {
