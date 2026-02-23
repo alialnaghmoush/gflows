@@ -82,17 +82,17 @@ export async function run(args: ParsedArgs): Promise<void> {
     typeFilter
   );
 
-  const sorted = [...workflowBranches].sort();
+  // Show main and dev first (when present), then workflow branches
+  const mainAndDev = [config.main, config.dev].filter((b) =>
+    allBranches.includes(b)
+  );
+  const sorted = [...mainAndDev, ...[...workflowBranches].sort()];
 
   for (const b of sorted) {
     console.log(b);
   }
 
-  if (!quiet && sorted.length === 0) {
-    console.error("No workflow branches found.");
-    // Hint: suggest creating first workflow branch
-    hint("Run gflows start <type> <name> to create a workflow branch.");
-  } else if (!quiet && sorted.length > 0) {
+  if (!quiet && sorted.length > 0) {
     // Hint: suggest switching to a listed branch
     hint("Use gflows switch <branch> to switch to a branch.");
   }

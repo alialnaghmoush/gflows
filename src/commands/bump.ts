@@ -111,7 +111,7 @@ function readPackageVersion(dir: string): { raw: string; semver: Semver } {
   const version = data.version;
   if (typeof version !== "string" || version.trim() === "") {
     throw new InvalidVersionError(
-      "package.json has no valid 'version' field."
+      "package.json has no valid 'version' field. Add a \"version\" field (e.g. \"0.0.0\") to package.json."
     );
   }
   const semver = parseVersion(version);

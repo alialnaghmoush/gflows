@@ -81,10 +81,15 @@ export async function run(args: ParsedArgs): Promise<void> {
 
   const allLocal = await branchList(root, { dryRun, verbose: args.verbose });
   const workflowBranches = getWorkflowBranches(allLocal, config.prefixes);
+  // Include main and dev so we always show whatever branches exist
+  const mainAndDev = [config.main, config.dev].filter((b) =>
+    allLocal.includes(b)
+  );
+  const choices = [...mainAndDev, ...workflowBranches];
 
-  if (workflowBranches.length === 0) {
+  if (choices.length === 0) {
     if (!quiet) {
-      console.error("No workflow branches found. Create one with 'gflows start <type> <name>'.");
+      console.error("No branches found.");
     }
     process.exit(EXIT_OK);
   }
@@ -92,7 +97,7 @@ export async function run(args: ParsedArgs): Promise<void> {
   const { select } = await import("@inquirer/prompts");
   const chosen = await select({
     message: "Switch to branch",
-    choices: workflowBranches.map((b) => ({ name: b, value: b })),
+    choices: choices.map((b) => ({ name: b, value: b })),
   });
 
   if (typeof chosen !== "string") {

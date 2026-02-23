@@ -123,6 +123,45 @@ function resolveCwd(pathFlag: string | undefined): string {
   return absolute;
 }
 
+/**
+ * Returns the command name closest to `input` by edit distance, or undefined if no close match.
+ * Used for "did you mean?" when the user mistypes a command.
+ */
+function closestCommand(input: string): Command | undefined {
+  if (!input || input.length < 2) return undefined;
+  const target = input.toLowerCase();
+  let best: Command | undefined;
+  let bestDistance = 3; // only suggest if within 2 edits
+  for (const cmd of COMMANDS) {
+    const d = editDistance(target, cmd);
+    if (d < bestDistance) {
+      bestDistance = d;
+      best = cmd as Command;
+    }
+  }
+  return best;
+}
+
+/** Levenshtein edit distance between two strings. */
+function editDistance(a: string, b: string): number {
+  const m = a.length;
+  const n = b.length;
+  const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+  for (let i = 0; i <= m; i++) dp[i]![0] = i;
+  for (let j = 0; j <= n; j++) dp[0]![j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      dp[i]![j] = Math.min(
+        dp[i - 1]![j]! + 1,
+        dp[i]![j - 1]! + 1,
+        dp[i - 1]![j - 1]! + cost
+      );
+    }
+  }
+  return dp[m]![n]!;
+}
+
 /** Resolve command from positionals and short flags. Short wins if both present. */
 function resolveCommand(
   positionals: string[],
@@ -240,7 +279,13 @@ export function parse(argv: string[] = Bun.argv.slice(2)): ParsedArgs {
 
   const command = resolveCommand(positionals, v);
   if (!command) {
-    console.error("gflows: missing command. Use 'gflows help' for usage.");
+    const first = positionals[0];
+    const suggestion = typeof first === "string" ? closestCommand(first) : undefined;
+    if (suggestion) {
+      console.error(`gflows: unknown command '${first}'. Did you mean '${suggestion}'?`);
+    } else {
+      console.error("gflows: missing command. Use 'gflows help' for usage.");
+    }
     process.exit(EXIT_USER);
   }
 
