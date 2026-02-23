@@ -171,7 +171,7 @@ gflows finish hotfix --push               # merge to main, then dev; tag v1.3.1;
 | `delete`     | `-L`  | Delete local workflow branch(es). Never main/dev.                         |
 | `list`       | `-l`  | List workflow branches; optional type filter and remote.                  |
 | `bump`       | —     | Bump or rollback package version (patch/minor/major).                     |
-| `completion` | —     | Print shell completion script (bash | zsh | fish).                        |
+| `completion` | —     | Print shell completion script (bash/zsh/fish).                            |
 | `status`     | `-t`  | Show current branch, type, base, merge target(s), ahead/behind.           |
 | `help`       | `-h`  | Show usage and quick reference.                                           |
 | `version`    | `-V`  | Show version.                                                             |
@@ -179,13 +179,30 @@ gflows finish hotfix --push               # merge to main, then dev; tag v1.3.1;
 
 **Branch types (for start/finish/list):** `feature` (`-f`), `bugfix` (`-b`), `chore` (`-c`), `release` (`-r`), `hotfix` (`-x`), `spike` (`-e`).
 
+**Common flags** (used by multiple commands):
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--path <dir>` | `-C` | Run as if in `<dir>`. |
+| `--dry-run` | `-d` | Log intended actions only; no writes. |
+| `--verbose` | `-v` | Verbose output. |
+| `--quiet` | `-q` | Minimal output. |
+| `--push` | `-p` | Push after init/start/finish. |
+| `--no-push` | `-P` | Do not push. |
+| `--main <name>` | — | Main branch override. |
+| `--dev <name>` | — | Dev branch override. |
+| `--remote <name>` | `-R` | Remote for push. |
+| `--from <branch>` | `-o` | Base branch override (start). |
+| `--branch <name>` | `-B` | Branch name (finish). |
+| `--yes` | `-y` | Skip confirmations. |
+
 ---
 
 ### init
 
 Ensures the **main** branch exists (exits with error if not). Creates **dev** from main if it does not exist; does nothing if dev already exists. Does not rewrite or force-push.
 
-You can set and persist config with `**--main`**, `**--dev**`, and `**-R`/`--remote**`. Any of these flags cause init to write or update `.gflows.json` with the given values (after a successful init; skipped with `--dry-run`).
+You can set and persist config with `**--main`**, `**--dev`**, and `**-R`/`--remote**`. Any of these flags cause init to write or update `.gflows.json` with the given values (after a successful init; skipped with `--dry-run`).
 
 **Examples:**
 
@@ -197,7 +214,18 @@ gflows init -C ../other-repo    # run in another directory
 gflows init --dry-run           # log intended actions only
 ```
 
-**Flags:** `--push`, `--main <name>`, `--dev <name>`, `-R`/`--remote <name>` (main/dev/remote are persisted to `.gflows.json` when provided), `-C`/`--path <dir>`, `--dry-run`, `-v`/`--verbose`, `-q`/`--quiet`.
+**Flags:**
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--push` | `-p` | Push dev to remote after creating. |
+| `--main <name>` | — | Main branch name (persisted to `.gflows.json` when provided). |
+| `--dev <name>` | — | Dev branch name (persisted to `.gflows.json` when provided). |
+| `--remote <name>` | `-R` | Remote name (persisted to `.gflows.json` when provided). |
+| `--path <dir>` | `-C` | Run as if in `<dir>`. |
+| `--dry-run` | `-d` | Log intended actions only; no writes. |
+| `--verbose` | `-v` | Verbose output. |
+| `--quiet` | `-q` | Minimal output. |
 
 ---
 
@@ -220,7 +248,18 @@ gflows start feature api-v2 --push               # create branch and push to rem
 gflows start chore deps-update -C ./backend      # run in subdirectory
 ```
 
-**Flags:** `--force` (allow dirty working tree), `--push`, `-o`/`--from <branch>` (base override, e.g. `-o main` for bugfix), `-R`/`--remote`, `-C`/`--path`, `--dry-run`, `-v`, `-q`.
+**Flags:**
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--force` | — | Allow dirty working tree. |
+| `--push` | `-p` | Push new branch to remote after creating. |
+| `--from <branch>` | `-o` | Base branch override (e.g. `-o main` for bugfix). |
+| `--remote <name>` | `-R` | Remote for push. |
+| `--path <dir>` | `-C` | Run as if in `<dir>`. |
+| `--dry-run` | `-d` | Log intended actions only; no writes. |
+| `--verbose` | `-v` | Verbose output. |
+| `--quiet` | `-q` | Minimal output. |
 
 ---
 
@@ -245,7 +284,25 @@ gflows finish -y                           # skip "Delete branch after finish?" 
 
 **Branch resolution:** If you omit the branch name, gflows uses the current branch. With `-B` and no value in a TTY, it shows a picker of workflow branches. Without a TTY, you must pass the branch name explicitly.
 
-**Flags:** `-B`/`--branch <name>`, `--no-ff`, `-D`/`--delete` (delete branch after finish), `-N`/`--no-delete`, `--push`, `-s`/`--sign`, `-T`/`--no-tag`, `-M`/`--tag-message`, `-m`/`--message`, `-y`/`--yes`, `-C`, `--dry-run`, `-v`, `-q`.
+**Flags:**
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--branch <name>` | `-B` | Branch to finish (current branch if omitted; picker in TTY when `-B` with no value). |
+| `--no-ff` | — | Always create a merge commit. |
+| `--delete` | `-D` | Delete branch after finish. |
+| `--no-delete` | `-N` | Do not delete branch after finish. |
+| `--push` | `-p` | Push after merge (finish prompts "Do you want to push?" when neither `-p` nor `-P`). |
+| `--no-push` | `-P` | Do not push. |
+| `--sign` | `-s` | Sign the tag (release/hotfix; GPG). |
+| `--no-tag` | `-T` | Do not create tag (release/hotfix). |
+| `--tag-message <msg>` | `-M` | Tag message. |
+| `--message <msg>` | `-m` | Merge message. |
+| `--yes` | `-y` | Skip confirmations (e.g. "Delete branch after finish?"). |
+| `--path <dir>` | `-C` | Run as if in `<dir>`. |
+| `--dry-run` | `-d` | Log intended actions only; no writes. |
+| `--verbose` | `-v` | Verbose output. |
+| `--quiet` | `-q` | Minimal output. |
 
 ---
 
@@ -261,7 +318,13 @@ gflows switch feature/auth-refactor
 gflows -W feature/auth-refactor    # same with short command
 ```
 
-**Flags:** `-C`/`--path`, `-v`, `-q`.
+**Flags:**
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--path <dir>` | `-C` | Run as if in `<dir>`. |
+| `--verbose` | `-v` | Verbose output. |
+| `--quiet` | `-q` | Minimal output. |
 
 ---
 
@@ -277,7 +340,13 @@ gflows delete feature/old-spike
 gflows delete feature/one feature/two    # delete multiple
 ```
 
-**Flags:** `-C`/`--path`, `-v`, `-q`.
+**Flags:**
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--path <dir>` | `-C` | Run as if in `<dir>`. |
+| `--verbose` | `-v` | Verbose output. |
+| `--quiet` | `-q` | Minimal output. |
 
 ---
 
@@ -295,7 +364,15 @@ gflows list -r feature                   # remote + local feature branches
 gflows list --include-remote
 ```
 
-**Flags:** `-r`/`--include-remote`, `-C`/`--path`, `--dry-run`, `-v`, `-q`.
+**Flags:**
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--include-remote` | `-r` | Include remote-tracking branches (may run `git fetch`). |
+| `--path <dir>` | `-C` | Run as if in `<dir>`. |
+| `--dry-run` | `-d` | Log intended actions only. |
+| `--verbose` | `-v` | Verbose output. |
+| `--quiet` | `-q` | Minimal output. |
 
 ---
 
@@ -317,7 +394,14 @@ gflows bump                              # interactive (direction + type) when T
 gflows bump --dry-run                    # print old → new, no file writes
 ```
 
-**Flags:** `--dry-run`, `-C`/`--path`, `-v`, `-q`.
+**Flags:**
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--dry-run` | `-d` | Print old → new version only; no file writes. |
+| `--path <dir>` | `-C` | Run as if in `<dir>`. |
+| `--verbose` | `-v` | Verbose output. |
+| `--quiet` | `-q` | Minimal output. |
 
 ---
 
@@ -332,7 +416,13 @@ gflows status
 gflows -t
 ```
 
-**Flags:** `-C`/`--path`, `-v`, `-q`.
+**Flags:**
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--path <dir>` | `-C` | Run as if in `<dir>`. |
+| `--verbose` | `-v` | Verbose output. |
+| `--quiet` | `-q` | Minimal output. |
 
 ---
 
@@ -386,7 +476,7 @@ Configuration is **optional**. Override branch names, remote, and branch **prefi
 **Resolution order** (later overrides earlier):
 
 1. Built-in defaults (`main`, `dev`, `origin`, and default prefixes).
-2. Repo config file: `**.gflows.json`** in repo root, or `**gflows**` key in `**package.json**`.
+2. Repo config file: `**.gflows.json`** in repo root, or `**gflows`** key in `**package.json**`.
 3. CLI (e.g. `--main`, `--dev`, `-R`/`--remote`).
 
 Only include keys you want to override; the rest stay default. Invalid or malformed config is ignored (with an optional warning when using `-v`).

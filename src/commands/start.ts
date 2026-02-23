@@ -141,6 +141,7 @@ export async function run(args: ParsedArgs): Promise<void> {
   }
 
   if (!args.quiet && !args.dryRun) {
+    // Hint: suggest next step — merge branch when done
     hint(`When done, run gflows finish ${type} to merge into the target branch.`);
   }
 }

@@ -210,6 +210,7 @@ export async function run(args: ParsedArgs): Promise<void> {
     const updated = [PACKAGE_JSON];
     if (jsrUpdated) updated.push(JSR_JSON);
     success(`Updated: ${updated.join(", ")}`);
+    // Hint: suggest next step — commit and start release branch
     hint("Commit the change, then run gflows start release vX.Y.Z to release.");
   }
 }

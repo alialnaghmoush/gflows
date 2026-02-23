@@ -102,6 +102,7 @@ export async function run(args: ParsedArgs): Promise<void> {
   }
 
   if (!args.quiet) {
+    // Hint: suggest next step — create first workflow branch
     hint("Run gflows start feature <name> to create a workflow branch.");
   }
 }

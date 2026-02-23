@@ -80,6 +80,7 @@ export async function run(args: ParsedArgs): Promise<void> {
       }
     }
     if (!quiet && !dryRun) {
+      // Hint: suggest listing remaining branches
       hint("Use gflows list to see remaining workflow branches.");
     }
     return;
@@ -139,6 +140,7 @@ export async function run(args: ParsedArgs): Promise<void> {
     }
   }
   if (!quiet && !dryRun && chosen.length > 0) {
+    // Hint: suggest listing remaining branches
     hint("Use gflows list to see remaining workflow branches.");
   }
 }

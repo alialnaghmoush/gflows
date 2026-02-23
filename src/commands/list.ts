@@ -90,8 +90,10 @@ export async function run(args: ParsedArgs): Promise<void> {
 
   if (!quiet && sorted.length === 0) {
     console.error("No workflow branches found.");
+    // Hint: suggest creating first workflow branch
     hint("Run gflows start <type> <name> to create a workflow branch.");
   } else if (!quiet && sorted.length > 0) {
+    // Hint: suggest switching to a listed branch
     hint("Use gflows switch <branch> to switch to a branch.");
   }
 }

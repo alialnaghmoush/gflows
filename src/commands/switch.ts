@@ -65,6 +65,7 @@ export async function run(args: ParsedArgs): Promise<void> {
     });
     if (!quiet && !dryRun) {
       success(`Switched to branch '${branchName}'.`);
+      // Hint: suggest listing branches
       hint("Use gflows list to see all workflow branches.");
     }
     return;
@@ -104,6 +105,7 @@ export async function run(args: ParsedArgs): Promise<void> {
   });
   if (!quiet && !dryRun) {
     success(`Switched to branch '${chosen}'.`);
+    // Hint: suggest listing branches
     hint("Use gflows list to see all workflow branches.");
   }
 }

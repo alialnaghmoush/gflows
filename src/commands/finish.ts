@@ -242,10 +242,21 @@ export async function run(args: ParsedArgs): Promise<void> {
     }
   }
 
-  const doPush = args.push && !args.noPush;
-  const didCreateTag = !!(
+  const createdTagName =
     meta.mergeTarget === "main-then-dev" && meta.tagOnFinish && version && !args.noTag
-  );
+      ? normalizeTagVersion(version)
+      : undefined;
+  const didCreateTag = Boolean(createdTagName);
+
+  let doPush = args.push && !args.noPush;
+  if (!args.push && !args.noPush && isTTY) {
+    const { confirm } = await import("@inquirer/prompts");
+    doPush = await confirm({
+      message: "Do you want to push?",
+      default: true,
+    });
+  }
+
   if (doPush) {
     const remote = args.remote ?? config.remote;
     const refsToPush: string[] = [config.dev];
@@ -271,7 +282,9 @@ export async function run(args: ParsedArgs): Promise<void> {
   }
 
   if (!args.quiet && !args.dryRun) {
-    success(`gflows: finished '${branchToFinish}' into ${meta.mergeTarget}.`);
+    const tagSuffix = createdTagName ? ` (tag ${createdTagName})` : "";
+    success(`gflows: finished '${branchToFinish}' into ${meta.mergeTarget}${tagSuffix}.`);
+    // Hint: suggest next step — create a new workflow branch
     hint("Run gflows start <type> <name> to create a new workflow branch.");
   }
 }
