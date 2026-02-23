@@ -186,10 +186,9 @@ async function main(): Promise<void> {
     process.exit(2);
   }
 
-  const version = syncVersion();
-  console.error(`[publish] Version synced: ${version}`);
-
   if (flags.dryRun) {
+    const version = syncVersion();
+    console.error(`[publish] Version synced: ${version}`);
     console.error("[publish] Dry run — would execute:");
     if (!flags.jsrOnly) console.error("  npm publish");
     if (!flags.npmOnly) console.error("  bunx jsr publish");
@@ -197,6 +196,9 @@ async function main(): Promise<void> {
   }
 
   await prePublishChecks(flags.force);
+
+  const version = syncVersion();
+  console.error(`[publish] Version synced: ${version}`);
 
   const doNpm = !flags.jsrOnly;
   const doJsr = !flags.npmOnly;
