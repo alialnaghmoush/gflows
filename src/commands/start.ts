@@ -53,7 +53,7 @@ export async function run(args: ParsedArgs): Promise<void> {
   const repoRoot = await resolveRepoRoot(args.cwd);
   const config = resolveConfig(
     repoRoot,
-    { remote: args.remote },
+    { main: args.main, dev: args.dev, remote: args.remote },
     { verbose: args.verbose }
   );
 

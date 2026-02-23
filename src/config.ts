@@ -1,10 +1,10 @@
 /**
- * Config resolution for gflows: defaults → repo config file → env → CLI overrides.
+ * Config resolution for gflows: defaults → repo config file → CLI overrides.
  * Exposes resolved main, dev, remote, and branch type prefixes for use by commands.
  * @module config
  */
 
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type {
   BranchPrefixes,
@@ -24,11 +24,7 @@ const CONFIG_FILE = ".gflows.json";
 const PACKAGE_JSON = "package.json";
 const GFLOWS_KEY = "gflows";
 
-const ENV_MAIN = "GFLOWS_MAIN";
-const ENV_DEV = "GFLOWS_DEV";
-const ENV_REMOTE = "GFLOWS_REMOTE";
-
-/** CLI overrides for main, dev, and remote (e.g. from -R/--remote or future flags). */
+/** CLI overrides for main, dev, and remote (e.g. --main, --dev, -R/--remote). */
 export interface ConfigCliOverrides {
   main?: string;
   dev?: string;
@@ -122,26 +118,6 @@ function normalizeConfigFile(data: unknown): GflowsConfigFile | null {
 }
 
 /**
- * Returns config overrides from environment (GFLOWS_MAIN, GFLOWS_DEV, GFLOWS_REMOTE).
- */
-export function getEnvConfigOverrides(): ConfigCliOverrides {
-  const overrides: ConfigCliOverrides = {};
-  const main = process.env[ENV_MAIN];
-  if (typeof main === "string" && main.trim() !== "") {
-    overrides.main = main.trim();
-  }
-  const dev = process.env[ENV_DEV];
-  if (typeof dev === "string" && dev.trim() !== "") {
-    overrides.dev = dev.trim();
-  }
-  const remote = process.env[ENV_REMOTE];
-  if (typeof remote === "string" && remote.trim() !== "") {
-    overrides.remote = remote.trim();
-  }
-  return overrides;
-}
-
-/**
  * Merges prefix overrides into a full Required<BranchPrefixes> (defaults + overrides).
  */
 function mergePrefixes(overrides?: BranchPrefixes): Required<BranchPrefixes> {
@@ -157,11 +133,11 @@ function mergePrefixes(overrides?: BranchPrefixes): Required<BranchPrefixes> {
 }
 
 /**
- * Resolves full config for the given directory: defaults → file → env → CLI.
+ * Resolves full config for the given directory: defaults → file → CLI.
  * Uses dir as the repo root for locating .gflows.json and package.json.
  *
  * @param dir - Directory to read config from (e.g. cwd or resolved -C path).
- * @param cliOverrides - Optional overrides from CLI (e.g. --remote).
+ * @param cliOverrides - Optional overrides from CLI (e.g. --main, --dev, --remote).
  * @param options - Optional { verbose } to warn when config file is missing or invalid.
  * @returns Resolved config with main, dev, remote, and full prefixes.
  */
@@ -189,16 +165,60 @@ export function resolveConfig(
     if (file.prefixes !== undefined) prefixes = mergePrefixes(file.prefixes);
   }
 
-  const envOverrides = getEnvConfigOverrides();
-  if (envOverrides.main !== undefined) main = envOverrides.main;
-  if (envOverrides.dev !== undefined) dev = envOverrides.dev;
-  if (envOverrides.remote !== undefined) remote = envOverrides.remote;
-
   if (cliOverrides?.main !== undefined) main = cliOverrides.main;
   if (cliOverrides?.dev !== undefined) dev = cliOverrides.dev;
   if (cliOverrides?.remote !== undefined) remote = cliOverrides.remote;
 
   return { main, dev, remote, prefixes };
+}
+
+/**
+ * Writes or updates .gflows.json in dir with the given partial config.
+ * Merges with existing .gflows.json if present; only provided keys are updated.
+ * Skips keys with empty string values.
+ *
+ * @param dir - Repo root directory.
+ * @param partial - Keys to set (main, dev, remote, prefixes); omitted keys are left unchanged.
+ */
+export function writeConfigFile(
+  dir: string,
+  partial: Partial<GflowsConfigFile>
+): void {
+  const path = join(dir, CONFIG_FILE);
+  let existing: GflowsConfigFile = {};
+  if (existsSync(path)) {
+    try {
+      const raw = readFileSync(path, "utf-8");
+      const data = JSON.parse(raw) as unknown;
+      const normalized = normalizeConfigFile(data);
+      if (normalized) existing = normalized;
+    } catch {
+      // overwrite invalid file
+    }
+  }
+  const merged: GflowsConfigFile = { ...existing };
+  if (typeof partial.main === "string" && partial.main.trim() !== "") {
+    merged.main = partial.main.trim();
+  }
+  if (typeof partial.dev === "string" && partial.dev.trim() !== "") {
+    merged.dev = partial.dev.trim();
+  }
+  if (typeof partial.remote === "string" && partial.remote.trim() !== "") {
+    merged.remote = partial.remote.trim();
+  }
+  if (partial.prefixes !== undefined && partial.prefixes !== null && typeof partial.prefixes === "object" && !Array.isArray(partial.prefixes)) {
+    const prefs = partial.prefixes as Record<string, unknown>;
+    const prefixes: BranchPrefixes = { ...(merged.prefixes ?? {}) };
+    const keys: (keyof BranchPrefixes)[] = ["feature", "bugfix", "chore", "release", "hotfix", "spike"];
+    for (const k of keys) {
+      const v = prefs[k];
+      if (typeof v === "string" && v.trim() !== "") {
+        prefixes[k] = v.trim();
+      }
+    }
+    merged.prefixes = prefixes;
+  }
+  writeFileSync(path, JSON.stringify(merged, null, 2) + "\n", "utf-8");
 }
 
 /**

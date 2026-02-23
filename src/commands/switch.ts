@@ -49,7 +49,11 @@ export async function run(args: ParsedArgs): Promise<void> {
     if (err instanceof NotRepoError) throw err;
     throw err;
   });
-  const config = resolveConfig(root);
+  const config = resolveConfig(root, {
+    main: args.main,
+    dev: args.dev,
+    remote: args.remote,
+  });
 
   const branchName = (branch?.trim() || name?.trim() || "").trim() || undefined;
 

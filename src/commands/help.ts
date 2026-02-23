@@ -33,7 +33,9 @@ Types: feature (-f), bugfix (-b), chore (-c), release (-r), hotfix (-x), spike (
 Common flags:
   -p, --push           Push after init/start/finish
   -P, --no-push        Do not push
-  -R, --remote <name>  Remote name for push
+  --main <name>        Main branch (init: persist to .gflows.json)
+  --dev <name>         Dev branch (init: persist to .gflows.json)
+  -R, --remote <name>  Remote for push (init: persist to .gflows.json)
   -o, --from <branch>  Base branch override (e.g. -o main for bugfix)
   -B, --branch <name>  Branch name (finish: branch to finish)
   -y, --yes            Skip confirmations

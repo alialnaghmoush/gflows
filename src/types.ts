@@ -101,6 +101,10 @@ export interface ParsedArgs {
   // Common flags
   push: boolean;
   noPush: boolean;
+  /** Main branch override (e.g. from --main; init persists to .gflows.json). */
+  main: string | undefined;
+  /** Dev branch override (e.g. from --dev; init persists to .gflows.json). */
+  dev: string | undefined;
   remote: string | undefined;
   branch: string | undefined;
   yes: boolean;

@@ -78,6 +78,8 @@ function buildParseArgsOptions() {
       // Common
       push: { type: "boolean" as const, short: "p" },
       noPush: { type: "boolean" as const, short: "P" },
+      main: { type: "string" as const },
+      dev: { type: "string" as const },
       remote: { type: "string" as const, short: "R" },
       from: { type: "string" as const, short: "o" },
       branch: { type: "string" as const, short: "B" },
@@ -276,6 +278,8 @@ export function parse(argv: string[] = Bun.argv.slice(2)): ParsedArgs {
     bumpType,
     push: v.push === true,
     noPush: v.noPush === true,
+    main: typeof v.main === "string" && v.main.trim() !== "" ? v.main.trim() : undefined,
+    dev: typeof v.dev === "string" && v.dev.trim() !== "" ? v.dev.trim() : undefined,
     remote: typeof v.remote === "string" ? v.remote : undefined,
     branch: typeof v.branch === "string" ? v.branch : undefined,
     yes: v.yes === true,

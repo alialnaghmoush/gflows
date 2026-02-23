@@ -22,9 +22,9 @@ export { BRANCH_TYPE_SHORTS } from "./types.js";
 export {
   readConfigFile,
   resolveConfig,
+  writeConfigFile,
   getPrefixForType,
   getBranchTypeMeta,
-  getEnvConfigOverrides,
 } from "./config.js";
 export type {
   ConfigCliOverrides,

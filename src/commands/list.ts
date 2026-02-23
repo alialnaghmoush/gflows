@@ -57,7 +57,11 @@ export async function run(args: ParsedArgs): Promise<void> {
     throw err;
   });
 
-  const config = resolveConfig(root, undefined, { verbose: !!verbose });
+  const config = resolveConfig(
+    root,
+    { main: args.main, dev: args.dev, remote: args.remote },
+    { verbose: !!verbose }
+  );
 
   if (includeRemote && !dryRun) {
     await fetch(root, config.remote, {

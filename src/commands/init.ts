@@ -1,9 +1,10 @@
 /**
  * Init command: ensure main exists, create dev from main, optional push and dry-run.
+ * Can persist main, dev, and remote to .gflows.json via --main, --dev, --remote.
  * @module commands/init
  */
 
-import { resolveConfig } from "../config.js";
+import { resolveConfig, writeConfigFile } from "../config.js";
 import { BranchNotFoundError, NotRepoError } from "../errors.js";
 import {
   branchList,
@@ -18,14 +19,21 @@ import type { ParsedArgs } from "../types.js";
  * Runs the init command: ensure main exists, create dev from main if missing, optional push.
  * Pre-check: cwd (or -C) must be a git repo; main branch must exist (exit 2 otherwise).
  * Skips creating dev if it already exists. Supports --dry-run and --push.
+ * When --main, --dev, or --remote are passed, writes or updates .gflows.json with those values.
  *
- * @param args - Parsed CLI args (cwd, dryRun, push, noPush, remote, verbose, quiet).
+ * @param args - Parsed CLI args (cwd, dryRun, push, noPush, main, dev, remote, verbose, quiet).
  */
 export async function run(args: ParsedArgs): Promise<void> {
   const repoRoot = await resolveRepoRoot(args.cwd);
-  const config = resolveConfig(repoRoot, {
-    remote: args.remote,
-  }, { verbose: args.verbose });
+  const config = resolveConfig(
+    repoRoot,
+    {
+      main: args.main,
+      dev: args.dev,
+      remote: args.remote,
+    },
+    { verbose: args.verbose }
+  );
 
   const opts = {
     dryRun: args.dryRun,
@@ -65,6 +73,18 @@ export async function run(args: ParsedArgs): Promise<void> {
     }
     if (!args.quiet && !args.dryRun) {
       console.error(`gflows: pushed '${config.dev}' to '${config.remote}'.`);
+    }
+  }
+
+  const hasConfigFlags = args.main !== undefined || args.dev !== undefined || args.remote !== undefined;
+  if (!args.dryRun && hasConfigFlags) {
+    writeConfigFile(repoRoot, {
+      ...(args.main !== undefined && { main: args.main }),
+      ...(args.dev !== undefined && { dev: args.dev }),
+      ...(args.remote !== undefined && { remote: args.remote }),
+    });
+    if (!args.quiet) {
+      console.error("gflows: updated .gflows.json with provided options.");
     }
   }
 }

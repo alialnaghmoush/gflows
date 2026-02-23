@@ -9,9 +9,9 @@ import { tmpdir } from "node:os";
 import {
   readConfigFile,
   resolveConfig,
+  writeConfigFile,
   getPrefixForType,
   getBranchTypeMeta,
-  getEnvConfigOverrides,
 } from "../src/config.ts";
 import type { BranchType } from "../src/types.ts";
 import { DEFAULT_MAIN, DEFAULT_DEV, DEFAULT_REMOTE, DEFAULT_PREFIXES } from "../src/constants.ts";
@@ -79,36 +79,6 @@ describe("readConfigFile", () => {
   });
 });
 
-describe("getEnvConfigOverrides", () => {
-  const origEnv = { ...process.env };
-
-  afterEach(() => {
-    process.env.GFLOWS_MAIN = origEnv.GFLOWS_MAIN;
-    process.env.GFLOWS_DEV = origEnv.GFLOWS_DEV;
-    process.env.GFLOWS_REMOTE = origEnv.GFLOWS_REMOTE;
-  });
-
-  test("returns overrides from env when set", () => {
-    process.env.GFLOWS_MAIN = "master";
-    process.env.GFLOWS_DEV = "develop";
-    process.env.GFLOWS_REMOTE = "upstream";
-    const overrides = getEnvConfigOverrides();
-    expect(overrides.main).toBe("master");
-    expect(overrides.dev).toBe("develop");
-    expect(overrides.remote).toBe("upstream");
-  });
-
-  test("returns empty when env not set", () => {
-    delete process.env.GFLOWS_MAIN;
-    delete process.env.GFLOWS_DEV;
-    delete process.env.GFLOWS_REMOTE;
-    const overrides = getEnvConfigOverrides();
-    expect(overrides.main).toBeUndefined();
-    expect(overrides.dev).toBeUndefined();
-    expect(overrides.remote).toBeUndefined();
-  });
-});
-
 describe("resolveConfig", () => {
   let dir: string;
 
@@ -121,7 +91,7 @@ describe("resolveConfig", () => {
     await rm(dir, { recursive: true }).catch(() => {});
   });
 
-  test("returns defaults when no file or env", () => {
+  test("returns defaults when no file", () => {
     const config = resolveConfig(dir);
     expect(config.main).toBe(DEFAULT_MAIN);
     expect(config.dev).toBe(DEFAULT_DEV);
@@ -134,6 +104,48 @@ describe("resolveConfig", () => {
     expect(config.main).toBe("trunk");
     expect(config.dev).toBe("work");
     expect(config.remote).toBe("origin2");
+  });
+});
+
+describe("writeConfigFile", () => {
+  let dir: string;
+
+  beforeEach(async () => {
+    dir = join(tmpdir(), `gflows-write-config-${Date.now()}`);
+    await mkdir(dir, { recursive: true });
+  });
+
+  afterEach(async () => {
+    await rm(dir, { recursive: true }).catch(() => {});
+  });
+
+  test("creates .gflows.json with main, dev, remote when none exists", () => {
+    writeConfigFile(dir, { main: "master", dev: "develop", remote: "upstream" });
+    const result = readConfigFile(dir);
+    expect(result.config?.main).toBe("master");
+    expect(result.config?.dev).toBe("develop");
+    expect(result.config?.remote).toBe("upstream");
+  });
+
+  test("merges with existing .gflows.json when only some keys provided", async () => {
+    await writeFile(
+      join(dir, ".gflows.json"),
+      JSON.stringify({ main: "main", dev: "dev", remote: "origin" }),
+      "utf-8"
+    );
+    writeConfigFile(dir, { dev: "develop" });
+    const result = readConfigFile(dir);
+    expect(result.config?.main).toBe("main");
+    expect(result.config?.dev).toBe("develop");
+    expect(result.config?.remote).toBe("origin");
+  });
+
+  test("skips empty string values", () => {
+    writeConfigFile(dir, { main: "main", dev: "", remote: "origin" });
+    const result = readConfigFile(dir);
+    expect(result.config?.main).toBe("main");
+    expect(result.config?.dev).toBeUndefined();
+    expect(result.config?.remote).toBe("origin");
   });
 });
 
