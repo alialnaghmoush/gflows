@@ -1,10 +1,10 @@
-# CI and publish for gflows: test, lint, then publish to npm and JSR.
+# CI and publish for gflows: test, lint, then publish to JSR and npm.
 #
 # Setup:
 # - JSR: Link this repo to the package in JSR settings (https://jsr.io/@alialnaghmoush/gflows).
-# - npm: Add NPM_TOKEN (classic or granular publish token) in repo Secrets.
+# - npm: Configure trusted publisher (OIDC) for this workflow in npm package settings.
 #
-# On push to main: runs test + lint, then publish:all. Existing versions are skipped by both registries.
+# On push to main: runs test + lint, then publishes JSR and npm.
 
 name: CI and Publish
 
@@ -48,10 +48,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
       - name: Install dependencies
         run: bun install --frozen-lockfile
-      - name: Publish to npm and JSR
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: bun run scripts/publish.ts -- --force
+      - name: Publish to JSR
+        run: bun run scripts/publish.ts -- --jsr-only --force
+
+      - name: Publish to npm (trusted publisher / OIDC)
+        run: bun run scripts/publish.ts -- --npm-only --force
         
