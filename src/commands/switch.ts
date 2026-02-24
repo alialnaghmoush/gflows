@@ -87,10 +87,17 @@ export async function run(args: ParsedArgs): Promise<void> {
       process.exit(EXIT_OK);
     }
 
+    const currentBranchForPicker = await getCurrentBranch(root, {
+      dryRun,
+      verbose: args.verbose,
+    });
     const { select } = await import("@inquirer/prompts");
     const chosen = await select({
       message: "Switch to branch",
-      choices: choices.map((b) => ({ name: b, value: b })),
+      choices: choices.map((b) => ({
+        name: currentBranchForPicker && b === currentBranchForPicker ? `${b} (current)` : b,
+        value: b,
+      })),
     });
 
     if (typeof chosen !== "string") {
@@ -181,23 +188,26 @@ export async function run(args: ParsedArgs): Promise<void> {
     }
   }
 
-  if (whenUncommitted === "restore") {
+  const tryRestoreTargetStash = async (): Promise<void> => {
     const targetStashRef = await findStashRefByBranch(root, targetBranch, gitOpts);
-    if (targetStashRef) {
-      try {
-        await stashPopRef(root, targetStashRef, gitOpts);
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        console.error(
-          `gflows switch: conflicts occurred while restoring saved changes for '${targetBranch}'.`,
-        );
-        console.error(
-          "The stash was not dropped. Resolve conflicts, then commit or run `git stash drop` as needed.",
-        );
-        if (args.verbose && msg) console.error(msg);
-        process.exit(EXIT_GIT);
-      }
+    if (!targetStashRef) return;
+    try {
+      await stashPopRef(root, targetStashRef, gitOpts);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(
+        `gflows switch: conflicts occurred while restoring saved changes for '${targetBranch}'.`,
+      );
+      console.error(
+        "The stash was not dropped. Resolve conflicts, then commit or run `git stash drop` as needed.",
+      );
+      if (args.verbose && msg) console.error(msg);
+      process.exit(EXIT_GIT);
     }
+  };
+
+  if (whenUncommitted === "restore" || whenUncommitted === undefined) {
+    await tryRestoreTargetStash();
   }
 
   if (!quiet && !dryRun) {

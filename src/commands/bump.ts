@@ -160,15 +160,16 @@ function writePackageVersion(dir: string, newVersion: string): void {
 }
 
 /**
- * Updates version in jsr.json if the file exists; preserves other keys.
+ * Updates version in jsr.json if the file exists. Only the version value is changed;
+ * the rest of the file (format, commas, spacing) is left unchanged.
  */
 function syncJsrVersion(dir: string, newVersion: string): boolean {
   const path = join(dir, JSR_JSON);
   if (!existsSync(path)) return false;
   const raw = readFileSync(path, "utf-8");
-  const data = JSON.parse(raw) as Record<string, unknown>;
-  data.version = newVersion;
-  writeFileSync(path, `${JSON.stringify(data, null, 2)}\n`, "utf-8");
+  const updated = raw.replace(/"version":\s*"[^"]*"/, `"version": "${newVersion}"`);
+  if (updated === raw) return false;
+  writeFileSync(path, updated, "utf-8");
   return true;
 }
 
