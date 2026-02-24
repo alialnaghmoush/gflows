@@ -16,11 +16,11 @@ import {
   isClean,
   resolveRepoRoot,
   restoreTracked,
+  STASH_SWITCH_MOVE_SUBSTRING,
   stashDropRef,
   stashPopRef,
   stashPush,
   stashPushMove,
-  STASH_SWITCH_MOVE_SUBSTRING,
 } from "../git.js";
 import { hint, success } from "../out.js";
 import type { BranchType, ParsedArgs } from "../types.js";
@@ -101,7 +101,8 @@ export async function run(args: ParsedArgs): Promise<void> {
 
   const gitOpts = { dryRun, verbose: args.verbose };
   const treeClean = await isClean(root, gitOpts);
-  let whenUncommitted: SwitchWhenUncommitted;
+  /** Only set when tree is dirty (or a mode flag was passed). When tree is clean and no flag, we just checkout. */
+  let whenUncommitted: SwitchWhenUncommitted | undefined;
 
   if (args.switchMode !== undefined) {
     whenUncommitted = args.switchMode;
@@ -125,9 +126,10 @@ export async function run(args: ParsedArgs): Promise<void> {
         },
       ],
     });
-  } else {
+  } else if (!treeClean) {
     whenUncommitted = "cancel";
   }
+  // When tree is clean and no flag: whenUncommitted stays undefined; we just checkout below.
 
   if (whenUncommitted === "cancel") {
     if (!quiet) {
@@ -155,7 +157,7 @@ export async function run(args: ParsedArgs): Promise<void> {
     const targetHasSavedState = await findStashRefByBranch(root, targetBranch, gitOpts);
     if (targetHasSavedState && !quiet) {
       console.error(
-        "Warning: This branch has saved changes. Clean will not restore them and will open the branch at its last commit. Use \"Restore\" if you want to reapply the saved changes.",
+        'Warning: This branch has saved changes. Clean will not restore them and will open the branch at its last commit. Use "Restore" if you want to reapply the saved changes.',
       );
     }
     if (!treeClean) {
@@ -191,8 +193,7 @@ export async function run(args: ParsedArgs): Promise<void> {
       try {
         await stashPopRef(root, targetStashRef, gitOpts);
       } catch (err) {
-        const msg =
-          err instanceof Error ? err.message : String(err);
+        const msg = err instanceof Error ? err.message : String(err);
         console.error(
           `gflows switch: conflicts occurred while restoring saved changes for '${targetBranch}'.`,
         );

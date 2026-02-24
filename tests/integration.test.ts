@@ -285,6 +285,46 @@ describe("integration: list and status", () => {
   });
 });
 
+describe("integration: switch flags and modes", () => {
+  let dir: string;
+
+  afterEach(async () => {
+    if (dir) await rm(dir, { recursive: true }).catch(() => {});
+  });
+
+  test("switch with --cancel and branch name → exit 1 and Switch cancelled", async () => {
+    dir = await createTempRepo();
+    await runGflows(dir, ["init", "--no-push"]);
+    const r = await runGflows(dir, ["switch", "dev", "--cancel"]);
+    expect(r.exitCode).toBe(1);
+    expect(r.stderr).toMatch(/Switch cancelled/i);
+  });
+
+  test("switch with multiple mode flags → exit 1 and only one of", async () => {
+    dir = await createTempRepo();
+    await runGflows(dir, ["init", "--no-push"]);
+    const r = await runGflows(dir, ["switch", "dev", "--restore", "--clean"]);
+    expect(r.exitCode).toBe(1);
+    expect(r.stderr).toMatch(/only one of.*--restore.*--clean.*--cancel.*--move/i);
+  });
+
+  test("switch with --restore and branch name (clean tree) → exit 0", async () => {
+    dir = await createTempRepo();
+    await runGflows(dir, ["init", "--no-push"]);
+    const r = await runGflows(dir, ["switch", "dev", "--restore"]);
+    expect(r.exitCode).toBe(0);
+    expect(r.stdout).toMatch(/Switched to branch 'dev'/);
+  });
+
+  test("switch with --clean and branch name (clean tree) → exit 0", async () => {
+    dir = await createTempRepo();
+    await runGflows(dir, ["init", "--no-push"]);
+    const r = await runGflows(dir, ["switch", "main", "--clean"]);
+    expect(r.exitCode).toBe(0);
+    expect(r.stdout).toMatch(/Switched to branch 'main'/);
+  });
+});
+
 describe("integration: empty branch list and non-TTY", () => {
   let dir: string;
 

@@ -378,10 +378,10 @@ const STASH_SWITCH_MOVE_MESSAGE = "gflows-switch-move";
  * @throws Error if stash fails.
  */
 export async function stashPushMove(cwd: string, options: GitRunOptions = {}): Promise<void> {
-  const result = await runGit(
-    ["stash", "push", "-u", "-m", STASH_SWITCH_MOVE_MESSAGE],
-    { cwd, ...options },
-  );
+  const result = await runGit(["stash", "push", "-u", "-m", STASH_SWITCH_MOVE_MESSAGE], {
+    cwd,
+    ...options,
+  });
   if (result.exitCode !== 0) {
     throw new Error(result.stderr.trim() || "git stash push failed.");
   }
