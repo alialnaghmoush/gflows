@@ -401,10 +401,10 @@ Switch to a workflow branch. With TTY and no branch name, shows a picker; otherw
 
 | Option | Description |
 | ------ | ----------- |
+| **Move** | Move current changes to the target branch. |
+| **Restore** | Save changes for this branch; restore target's saved state (if any). |
+| **Clean** | Discard changes and switch clean at HEAD. |
 | **Cancel** | Abort switching. |
-| **Move changes to target** | Take current changes with you to the target branch (stash → switch → pop). |
-| **Restore** | Save changes for the current branch; switch; restore any saved changes for the target branch (if any). |
-| **Clean** | Discard changes and switch to the target branch clean at HEAD. |
 
 You can skip the prompt by passing exactly one of the flags below. If the target branch has saved changes and you use **Clean**, a warning is shown (unless `-q`).
 
@@ -425,9 +425,9 @@ bun gflows -W feature/auth-refactor
 | -------------- | ----- | --------------------------------------------------------------------------- |
 | `--path <dir>` | `-C`  | Run as if in `<dir>`.                                                      |
 | `--branch <name>` | `-B` | Branch to switch to (alternative to positional).                           |
-| `--move`       | —     | Take current changes to the target branch; no prompt.                       |
-| `--restore`    | —     | Per-branch save/restore; no prompt.                                         |
-| `--clean`      | —     | Discard changes and switch clean; no prompt.                               |
+| `--move`       | —     | Move current changes to the target branch; no prompt.                       |
+| `--restore`    | —     | Save for this branch; restore target's saved state (if any); no prompt.     |
+| `--clean`      | —     | Discard changes and switch clean at HEAD; no prompt.                       |
 | `--cancel`     | —     | Abort switching; no prompt.                                                |
 | `--verbose`    | `-v`  | Verbose output.                                                            |
 | `--quiet`      | `-q`  | Minimal output (suppresses Clean warning about saved changes on target).  |

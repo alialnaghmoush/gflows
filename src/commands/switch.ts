@@ -111,19 +111,13 @@ export async function run(args: ParsedArgs): Promise<void> {
     whenUncommitted = await selectPrompt({
       message: "Working tree has uncommitted changes. What do you want to do?",
       choices: [
-        { name: "Cancel — Abort switching", value: "cancel" as const },
+        { name: "Move — Move current changes to the target branch", value: "move" as const },
         {
-          name: "Move changes to target — Take current changes with you to the target branch",
-          value: "move" as const,
-        },
-        {
-          name: "Restore — Save for this branch; switch; restore target's saved changes (if any)",
+          name: "Restore — Save changes for this branch; restore target's saved state (if any)",
           value: "restore" as const,
         },
-        {
-          name: "Clean — Discard changes and switch to target clean at HEAD",
-          value: "clean" as const,
-        },
+        { name: "Clean — Discard changes and switch clean at HEAD", value: "clean" as const },
+        { name: "Cancel — Abort switching", value: "cancel" as const },
       ],
     });
   } else if (!treeClean) {
