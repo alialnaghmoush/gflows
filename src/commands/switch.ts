@@ -5,11 +5,12 @@
 
 import { resolveConfig } from "../config.js";
 import { EXIT_GIT, EXIT_OK, EXIT_USER } from "../constants.js";
-import { NotRepoError } from "../errors.js";
+import { CannotDeleteMainOrDevError, NotRepoError } from "../errors.js";
 import {
   branchList,
   checkout,
   cleanUntracked,
+  deleteBranch,
   findStashRefByBranch,
   findStashRefByMessage,
   getCurrentBranch,
@@ -26,7 +27,7 @@ import { hint, success } from "../out.js";
 import type { BranchType, ParsedArgs } from "../types.js";
 
 /** User choice when switching with uncommitted changes. */
-type SwitchWhenUncommitted = "cancel" | "restore" | "clean" | "move";
+type SwitchWhenUncommitted = "cancel" | "restore" | "clean" | "move" | "destroy";
 
 const BRANCH_TYPES: BranchType[] = ["feature", "bugfix", "chore", "release", "hotfix", "spike"];
 
@@ -124,6 +125,10 @@ export async function run(args: ParsedArgs): Promise<void> {
           value: "restore" as const,
         },
         { name: "Clean — Discard changes and switch clean at HEAD", value: "clean" as const },
+        {
+          name: "Destroy — Delete current branch and switch to the target branch",
+          value: "destroy" as const,
+        },
         { name: "Cancel — Abort switching", value: "cancel" as const },
       ],
     });
@@ -137,6 +142,31 @@ export async function run(args: ParsedArgs): Promise<void> {
       console.error("Switch cancelled.");
     }
     process.exit(EXIT_USER);
+  }
+
+  let branchToDestroy: string | undefined;
+  if (whenUncommitted === "destroy") {
+    const currentBranch = await getCurrentBranch(root, gitOpts);
+    if (!currentBranch) {
+      console.error("gflows switch: cannot destroy when HEAD is detached.");
+      process.exit(EXIT_USER);
+    }
+    if (currentBranch === config.main || currentBranch === config.dev) {
+      throw new CannotDeleteMainOrDevError(
+        `Cannot destroy the long-lived branch '${currentBranch}'.`,
+      );
+    }
+    if (currentBranch === targetBranch) {
+      console.error(
+        "gflows switch: cannot destroy current branch when switching to the same branch.",
+      );
+      process.exit(EXIT_USER);
+    }
+    branchToDestroy = currentBranch;
+    if (!treeClean) {
+      await restoreTracked(root, gitOpts);
+      await cleanUntracked(root, gitOpts);
+    }
   }
 
   if (!treeClean && whenUncommitted === "move") {
@@ -210,7 +240,12 @@ export async function run(args: ParsedArgs): Promise<void> {
     await tryRestoreTargetStash();
   }
 
-  if (!quiet && !dryRun) {
+  if (branchToDestroy) {
+    await deleteBranch(root, branchToDestroy, gitOpts);
+    if (!quiet && !dryRun) {
+      success(`Deleted branch '${branchToDestroy}' and switched to '${targetBranch}'.`);
+    }
+  } else if (!quiet && !dryRun) {
     success(`Switched to branch '${targetBranch}'.`);
     hint("Use gflows list to see all workflow branches.");
   }

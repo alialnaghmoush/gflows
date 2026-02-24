@@ -265,7 +265,7 @@ Release and hotfix names must be a version (`vX.Y.Z` or `X.Y.Z`). Branch names u
 | `init`       | `-I`  | Ensure main exists; create dev from main.                                 |
 | `start`      | `-S`  | Create a workflow branch (requires type + name).                          |
 | `finish`     | `-F`  | Merge branch into target(s), optional tag (release/hotfix), delete, push. |
-| `switch`     | `-W`  | Switch to a workflow branch (picker or name); with uncommitted changes: prompt or `--move` / `--restore` / `--clean` / `--cancel`. |
+| `switch`     | `-W`  | Switch to a workflow branch (picker or name); with uncommitted changes: prompt or `--move` / `--restore` / `--clean` / `--destroy` / `--cancel`. |
 | `delete`     | `-L`  | Delete local workflow branch(es). Never main/dev.                         |
 | `list`       | `-l`  | List workflow branches; optional type filter and remote.                  |
 | `bump`       | —     | Bump or rollback package version (patch/minor/major).                     |
@@ -404,6 +404,7 @@ Switch to a workflow branch. With TTY and no branch name, shows a picker; otherw
 | **Move** | Move current changes to the target branch. |
 | **Restore** | Save changes for this branch; restore target's saved state (if any). |
 | **Clean** | Discard changes and switch clean at HEAD. |
+| **Destroy** | Delete current branch and switch to the target branch (cannot destroy main or dev). |
 | **Cancel** | Abort switching. |
 
 You can skip the prompt by passing exactly one of the flags below. If the target branch has saved changes and you use **Clean**, a warning is shown (unless `-q`).
@@ -415,6 +416,7 @@ bun gflows switch
 bun gflows switch feature/auth-refactor
 bun gflows switch dev --restore
 bun gflows switch main --clean
+bun gflows switch dev --destroy
 bun gflows -W feature/auth-refactor
 ```
 
@@ -428,6 +430,7 @@ bun gflows -W feature/auth-refactor
 | `--move`       | —     | Move current changes to the target branch; no prompt.                       |
 | `--restore`    | —     | Save for this branch; restore target's saved state (if any); no prompt.     |
 | `--clean`      | —     | Discard changes and switch clean at HEAD; no prompt.                       |
+| `--destroy`    | —     | Delete current branch and switch to target; no prompt (not main/dev).      |
 | `--cancel`     | —     | Abort switching; no prompt.                                                |
 | `--verbose`    | `-v`  | Verbose output.                                                            |
 | `--quiet`      | `-q`  | Minimal output (suppresses Clean warning about saved changes on target).  |

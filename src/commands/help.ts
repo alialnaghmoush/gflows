@@ -51,6 +51,7 @@ List:   -r, --include-remote   Include remote-tracking branches
 Switch: --move      Move current changes to the target branch
         --restore   Save for this branch; restore target's saved state (if any)
         --clean     Discard changes and switch clean at HEAD
+        --destroy   Delete current branch and switch to target (not main/dev)
         --cancel    Abort switching
 
 Exit codes: 0 success, 1 usage/validation, 2 Git or system error.

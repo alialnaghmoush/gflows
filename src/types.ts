@@ -120,5 +120,5 @@ export interface ParsedArgs {
   // list
   includeRemote: boolean;
   // switch: explicit mode when uncommitted (overrides prompt)
-  switchMode?: "restore" | "clean" | "cancel" | "move";
+  switchMode?: "restore" | "clean" | "cancel" | "move" | "destroy";
 }

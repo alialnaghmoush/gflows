@@ -95,11 +95,12 @@ function buildParseArgsOptions() {
       // list (-r is context-dependent: list → include-remote; start/finish → release)
       includeRemote: { type: "boolean" as const },
       "include-remote": { type: "boolean" as const },
-      // switch: explicit mode (--restore, --clean, --cancel, --move)
+      // switch: explicit mode (--restore, --clean, --cancel, --move, --destroy)
       restore: { type: "boolean" as const },
       clean: { type: "boolean" as const },
       cancel: { type: "boolean" as const },
       move: { type: "boolean" as const },
+      destroy: { type: "boolean" as const },
     },
   };
 }
@@ -317,16 +318,17 @@ export function parse(argv: string[] = Bun.argv.slice(2)): ParsedArgs {
   else if (command === "completion" && name === "zsh") completionShell = "zsh";
   else if (command === "completion" && name === "fish") completionShell = "fish";
 
-  let switchMode: "restore" | "clean" | "cancel" | "move" | undefined;
+  let switchMode: "restore" | "clean" | "cancel" | "move" | "destroy" | undefined;
   if (command === "switch") {
     const restore = v.restore === true;
     const clean = v.clean === true;
     const cancel = v.cancel === true;
     const move = v.move === true;
-    const count = [restore, clean, cancel, move].filter(Boolean).length;
+    const destroy = v.destroy === true;
+    const count = [restore, clean, cancel, move, destroy].filter(Boolean).length;
     if (count > 1) {
       console.error(
-        "gflows switch: only one of --restore, --clean, --cancel, or --move may be used at a time.",
+        "gflows switch: only one of --restore, --clean, --cancel, --move, or --destroy may be used at a time.",
       );
       process.exit(EXIT_USER);
     }
@@ -334,6 +336,7 @@ export function parse(argv: string[] = Bun.argv.slice(2)): ParsedArgs {
     else if (clean) switchMode = "clean";
     else if (cancel) switchMode = "cancel";
     else if (move) switchMode = "move";
+    else if (destroy) switchMode = "destroy";
   }
 
   return {

@@ -305,7 +305,33 @@ describe("integration: switch flags and modes", () => {
     await runGflows(dir, ["init", "--no-push"]);
     const r = await runGflows(dir, ["switch", "dev", "--restore", "--clean"]);
     expect(r.exitCode).toBe(1);
-    expect(r.stderr).toMatch(/only one of.*--restore.*--clean.*--cancel.*--move/i);
+    expect(r.stderr).toMatch(/only one of.*--restore.*--clean.*--cancel.*--move.*--destroy/i);
+  });
+
+  test("switch with --destroy when on main → exit 2 and Cannot destroy", async () => {
+    dir = await createTempRepo();
+    await runGflows(dir, ["init", "--no-push"]);
+    const r = await runGflows(dir, ["switch", "dev", "--destroy"]);
+    expect(r.exitCode).toBe(2);
+    expect(r.stderr).toMatch(/Cannot destroy|cannot destroy|long-lived/i);
+  });
+
+  test("switch with --destroy from feature branch to dev → exit 0 and branch deleted", async () => {
+    dir = await createTempRepo();
+    await runGflows(dir, ["init", "--no-push"]);
+    await runGflows(dir, ["start", "feature", "temp-feat"]);
+    const r = await runGflows(dir, ["switch", "dev", "--destroy"]);
+    expect(r.exitCode).toBe(0);
+    expect(r.stdout).toMatch(/Deleted branch.*temp-feat.*switched to.*dev/i);
+    const list = Bun.spawn(["git", "branch", "--list"], {
+      cwd: dir,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const out = await new Response(list.stdout).text();
+    await list.exited;
+    expect(out).not.toContain("feature/temp-feat");
+    expect(out).toMatch(/\*?\s*dev/);
   });
 
   test("switch with --restore and branch name (clean tree) → exit 0", async () => {
