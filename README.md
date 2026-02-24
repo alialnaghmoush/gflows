@@ -265,7 +265,7 @@ Release and hotfix names must be a version (`vX.Y.Z` or `X.Y.Z`). Branch names u
 | `init`       | `-I`  | Ensure main exists; create dev from main.                                 |
 | `start`      | `-S`  | Create a workflow branch (requires type + name).                          |
 | `finish`     | `-F`  | Merge branch into target(s), optional tag (release/hotfix), delete, push. |
-| `switch`     | `-W`  | Switch to a workflow branch (picker or name).                             |
+| `switch`     | `-W`  | Switch to a workflow branch (picker or name); with uncommitted changes: prompt or `--move` / `--restore` / `--clean` / `--cancel`. |
 | `delete`     | `-L`  | Delete local workflow branch(es). Never main/dev.                         |
 | `list`       | `-l`  | List workflow branches; optional type filter and remote.                  |
 | `bump`       | —     | Bump or rollback package version (patch/minor/major).                     |
@@ -395,24 +395,42 @@ bun gflows finish hotfix -s -T -y
 
 ### switch
 
-Switch to a workflow branch. With TTY and no name, shows a picker; otherwise pass branch name.
+Switch to a workflow branch. With TTY and no branch name, shows a picker; otherwise pass the branch name (e.g. `gflows switch dev` or `-B dev`).
+
+**Uncommitted changes:** If the working tree is dirty and stdin is a TTY, you are prompted to choose:
+
+| Option | Description |
+| ------ | ----------- |
+| **Cancel** | Abort switching. |
+| **Move changes to target** | Take current changes with you to the target branch (stash → switch → pop). |
+| **Restore** | Save changes for the current branch; switch; restore any saved changes for the target branch (if any). |
+| **Clean** | Discard changes and switch to the target branch clean at HEAD. |
+
+You can skip the prompt by passing exactly one of the flags below. If the target branch has saved changes and you use **Clean**, a warning is shown (unless `-q`).
 
 **Examples:**
 
 ```bash
 bun gflows switch
 bun gflows switch feature/auth-refactor
+bun gflows switch dev --restore
+bun gflows switch main --clean
 bun gflows -W feature/auth-refactor
 ```
 
 **Flags:**
 
 
-| Flag           | Short | Description           |
-| -------------- | ----- | --------------------- |
-| `--path <dir>` | `-C`  | Run as if in `<dir>`. |
-| `--verbose`    | `-v`  | Verbose output.       |
-| `--quiet`      | `-q`  | Minimal output.       |
+| Flag           | Short | Description                                                                 |
+| -------------- | ----- | --------------------------------------------------------------------------- |
+| `--path <dir>` | `-C`  | Run as if in `<dir>`.                                                      |
+| `--branch <name>` | `-B` | Branch to switch to (alternative to positional).                           |
+| `--move`       | —     | Take current changes to the target branch; no prompt.                       |
+| `--restore`    | —     | Per-branch save/restore; no prompt.                                         |
+| `--clean`      | —     | Discard changes and switch clean; no prompt.                               |
+| `--cancel`     | —     | Abort switching; no prompt.                                                |
+| `--verbose`    | `-v`  | Verbose output.                                                            |
+| `--quiet`      | `-q`  | Minimal output (suppresses Clean warning about saved changes on target).  |
 
 
 ---

@@ -314,6 +314,173 @@ export async function isClean(cwd: string, options: GitRunOptions = {}): Promise
   return result.stdout.trim() === "";
 }
 
+/** Stash message prefix for per-branch switch restore. Full message: gflows-switch:<branchName>. */
+export const STASH_SWITCH_PREFIX = "gflows-switch:";
+
+/**
+ * Stashes uncommitted changes (including untracked) for the given branch (git stash push -u -m "gflows-switch:<branch>").
+ * Used for per-branch restore so the stash can be found and applied when switching back.
+ * Callers that want at most one stash per branch should drop an existing stash for that branch
+ * (findStashRefByBranch + stashDropRef) before calling this.
+ *
+ * @param cwd - Repo root.
+ * @param branchName - Branch name to tag the stash with.
+ * @param options - dryRun, verbose.
+ * @throws Error if stash fails.
+ */
+export async function stashPush(
+  cwd: string,
+  branchName: string,
+  options: GitRunOptions = {},
+): Promise<void> {
+  const message = `${STASH_SWITCH_PREFIX}${branchName}`;
+  const result = await runGit(["stash", "push", "-u", "-m", message], { cwd, ...options });
+  if (result.exitCode !== 0) {
+    throw new Error(result.stderr.trim() || "git stash push failed.");
+  }
+}
+
+/**
+ * Returns the stash ref (e.g. stash@{0}) for the most recent stash tagged with gflows-switch:<branchName>, or null.
+ * Parses `git stash list` and matches the message; stash list is newest-first.
+ *
+ * @param cwd - Repo root.
+ * @param branchName - Branch name (stash message is gflows-switch:<branchName>).
+ * @param options - dryRun, verbose.
+ */
+export async function findStashRefByBranch(
+  cwd: string,
+  branchName: string,
+  options: GitRunOptions = {},
+): Promise<string | null> {
+  const result = await runGit(["stash", "list"], { cwd, ...options });
+  if (result.exitCode !== 0 || !result.stdout.trim()) return null;
+  const tag = `${STASH_SWITCH_PREFIX}${branchName}`;
+  const escaped = tag.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const re = new RegExp(`${escaped}(?:[\\s:]|$)`);
+  for (const line of result.stdout.trim().split("\n")) {
+    const match = line.match(/^(stash@\{\d+\})/);
+    const ref = match?.[1];
+    if (ref && re.test(line)) return ref;
+  }
+  return null;
+}
+
+/** Stash message used for "move changes to target" (one-off stash, popped after checkout). */
+const STASH_SWITCH_MOVE_MESSAGE = "gflows-switch-move";
+
+/**
+ * Stashes uncommitted changes (including untracked) for "move to target" flow (git stash push -u -m "<move message>").
+ * The stash is popped on the target branch; use findStashRefByMessage + stashPopRef after checkout.
+ *
+ * @param cwd - Repo root.
+ * @param options - dryRun, verbose.
+ * @throws Error if stash fails.
+ */
+export async function stashPushMove(cwd: string, options: GitRunOptions = {}): Promise<void> {
+  const result = await runGit(
+    ["stash", "push", "-u", "-m", STASH_SWITCH_MOVE_MESSAGE],
+    { cwd, ...options },
+  );
+  if (result.exitCode !== 0) {
+    throw new Error(result.stderr.trim() || "git stash push failed.");
+  }
+}
+
+/**
+ * Returns the stash ref (e.g. stash@{0}) for the most recent stash whose message contains the given substring, or null.
+ * Used to find the "move" stash after checkout.
+ *
+ * @param cwd - Repo root.
+ * @param messageSubstring - Substring to search for in stash list lines.
+ * @param options - dryRun, verbose.
+ */
+export async function findStashRefByMessage(
+  cwd: string,
+  messageSubstring: string,
+  options: GitRunOptions = {},
+): Promise<string | null> {
+  const result = await runGit(["stash", "list"], { cwd, ...options });
+  if (result.exitCode !== 0 || !result.stdout.trim()) return null;
+  for (const line of result.stdout.trim().split("\n")) {
+    if (!line.includes(messageSubstring)) continue;
+    const match = line.match(/^(stash@\{\d+\})/);
+    const ref = match?.[1];
+    if (ref) return ref;
+  }
+  return null;
+}
+
+/** Message substring used to find the "move" stash after checkout (internal). */
+export const STASH_SWITCH_MOVE_SUBSTRING = "gflows-switch-move";
+
+/**
+ * Pops a specific stash by ref (e.g. stash@{0}). Used to restore per-branch stash for target branch.
+ * On success the stash is removed. On conflict Git keeps the stash so the user can retry or drop it.
+ *
+ * @param cwd - Repo root.
+ * @param stashRef - Stash ref from findStashRefByBranch (e.g. "stash@{0}").
+ * @param options - dryRun, verbose.
+ * @throws Error if stash pop fails (e.g. merge conflicts).
+ */
+export async function stashPopRef(
+  cwd: string,
+  stashRef: string,
+  options: GitRunOptions = {},
+): Promise<void> {
+  const result = await runGit(["stash", "pop", stashRef], { cwd, ...options });
+  if (result.exitCode !== 0) {
+    throw new Error(result.stderr.trim() || `git stash pop ${stashRef} failed.`);
+  }
+}
+
+/**
+ * Drops a specific stash by ref (e.g. stash@{0}). Used to overwrite per-branch stash before pushing a new one.
+ *
+ * @param cwd - Repo root.
+ * @param stashRef - Stash ref (e.g. "stash@{0}").
+ * @param options - dryRun, verbose.
+ * @throws Error if stash drop fails.
+ */
+export async function stashDropRef(
+  cwd: string,
+  stashRef: string,
+  options: GitRunOptions = {},
+): Promise<void> {
+  const result = await runGit(["stash", "drop", stashRef], { cwd, ...options });
+  if (result.exitCode !== 0) {
+    throw new Error(result.stderr.trim() || `git stash drop ${stashRef} failed.`);
+  }
+}
+
+/**
+ * Discards tracked changes in the working tree (git restore .). Does not remove untracked files.
+ *
+ * @param cwd - Repo root.
+ * @param options - dryRun, verbose.
+ * @throws Error if restore fails.
+ */
+export async function restoreTracked(cwd: string, options: GitRunOptions = {}): Promise<void> {
+  const result = await runGit(["restore", "."], { cwd, ...options });
+  if (result.exitCode !== 0) {
+    throw new Error(result.stderr.trim() || "git restore . failed.");
+  }
+}
+
+/**
+ * Removes untracked files and directories (git clean -fd).
+ *
+ * @param cwd - Repo root.
+ * @param options - dryRun, verbose.
+ * @throws Error if clean fails.
+ */
+export async function cleanUntracked(cwd: string, options: GitRunOptions = {}): Promise<void> {
+  const result = await runGit(["clean", "-fd"], { cwd, ...options });
+  if (result.exitCode !== 0) {
+    throw new Error(result.stderr.trim() || "git clean -fd failed.");
+  }
+}
+
 /**
  * Returns the current branch name, or null if HEAD is detached.
  *

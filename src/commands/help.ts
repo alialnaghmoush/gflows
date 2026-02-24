@@ -48,6 +48,7 @@ Start:  --force         Allow dirty working tree
 Finish: --no-ff         Always create merge commit; -D/--delete, -N/--no-delete;
         -s/--sign, -T/--no-tag, -M/--tag-message, -m/--message
 List:   -r, --include-remote   Include remote-tracking branches
+Switch: --move, --restore, --clean, --cancel   Explicit mode when uncommitted (no prompt)
 
 Exit codes: 0 success, 1 usage/validation, 2 Git or system error.
 

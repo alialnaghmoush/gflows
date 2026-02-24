@@ -95,6 +95,11 @@ function buildParseArgsOptions() {
       // list (-r is context-dependent: list → include-remote; start/finish → release)
       includeRemote: { type: "boolean" as const },
       "include-remote": { type: "boolean" as const },
+      // switch: explicit mode (--restore, --clean, --cancel, --move)
+      restore: { type: "boolean" as const },
+      clean: { type: "boolean" as const },
+      cancel: { type: "boolean" as const },
+      move: { type: "boolean" as const },
     },
   };
 }
@@ -312,6 +317,25 @@ export function parse(argv: string[] = Bun.argv.slice(2)): ParsedArgs {
   else if (command === "completion" && name === "zsh") completionShell = "zsh";
   else if (command === "completion" && name === "fish") completionShell = "fish";
 
+  let switchMode: "restore" | "clean" | "cancel" | "move" | undefined;
+  if (command === "switch") {
+    const restore = v.restore === true;
+    const clean = v.clean === true;
+    const cancel = v.cancel === true;
+    const move = v.move === true;
+    const count = [restore, clean, cancel, move].filter(Boolean).length;
+    if (count > 1) {
+      console.error(
+        "gflows switch: only one of --restore, --clean, --cancel, or --move may be used at a time.",
+      );
+      process.exit(EXIT_USER);
+    }
+    if (restore) switchMode = "restore";
+    else if (clean) switchMode = "clean";
+    else if (cancel) switchMode = "cancel";
+    else if (move) switchMode = "move";
+  }
+
   return {
     command,
     cwd,
@@ -342,6 +366,7 @@ export function parse(argv: string[] = Bun.argv.slice(2)): ParsedArgs {
     tagMessage: typeof v.tagMessage === "string" ? v.tagMessage : undefined,
     message: typeof v.message === "string" ? v.message : undefined,
     includeRemote,
+    switchMode,
   };
 }
 
