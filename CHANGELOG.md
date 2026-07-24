@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.4] - 2026-07-25
+
+### Fixed
+
+- Hub switch flow typecheck when HEAD is detached (`current` may be null)
+
 ## [1.0.3] - 2026-07-25
 
 ### Fixed
