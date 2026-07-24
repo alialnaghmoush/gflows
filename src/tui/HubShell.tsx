@@ -1,0 +1,186 @@
+/**
+ * Persistent Ink hub shell: home map + in-app wizards (no Clack drop-out for prompts).
+ * @module tui/HubShell
+ */
+
+import { Box, Text, useApp, useInput } from "ink";
+import type React from "react";
+import { useState } from "react";
+import { FinishFlow, StartFlow, SyncFlow } from "./flows.js";
+import { HubHome } from "./HubHome.js";
+import { WizardFrame } from "./prompts.js";
+
+const ACCENT = "#E88C4A";
+const MUTED = "#8A8A8A";
+const FG = "#E6E6E6";
+
+/** Outcome of one hub session (Ink unmounts after this). */
+export type HubSessionResult = { kind: "quit" } | { kind: "run"; argv: string[] };
+
+type Screen =
+  | { id: "home"; flash?: string }
+  | { id: "start" }
+  | { id: "finish" }
+  | { id: "sync" }
+  | { id: "notice"; message: string };
+
+/**
+ * Props for the hub shell.
+ */
+export interface HubShellProps {
+  cwd: string;
+  onDone: (result: HubSessionResult) => void;
+}
+
+/**
+ * Fullscreen hub with embedded wizards.
+ */
+export function HubShell({ cwd, onDone }: HubShellProps): React.ReactElement {
+  const { exit } = useApp();
+  const [screen, setScreen] = useState<Screen>({ id: "home" });
+
+  const finish = (result: HubSessionResult) => {
+    onDone(result);
+    exit();
+  };
+
+  const cancelWizard = () => setScreen({ id: "home" });
+  const runArgv = (argv: string[]) => finish({ kind: "run", argv });
+
+  const handleSlash = (raw: string) => {
+    const parts = raw.slice(1).trim().split(/\s+/);
+    const cmd = (parts[0] ?? "").toLowerCase();
+    const rest = parts.slice(1);
+
+    if (!cmd || cmd === "quit" || cmd === "exit" || cmd === "q") {
+      finish({ kind: "quit" });
+      return;
+    }
+
+    if (cmd === "start") {
+      if (rest.length >= 2) {
+        const type = rest[0] ?? "feature";
+        const name = rest[1] ?? "";
+        runArgv(["start", type, name, "-P", ...rest.slice(2)]);
+        return;
+      }
+      setScreen({ id: "start" });
+      return;
+    }
+    if (cmd === "finish") {
+      if (rest.length > 0) {
+        runArgv(["finish", "-y", "-P", ...rest]);
+        return;
+      }
+      setScreen({ id: "finish" });
+      return;
+    }
+    if (cmd === "sync") {
+      if (rest.length > 0) {
+        runArgv(["sync", "--force", ...rest]);
+        return;
+      }
+      setScreen({ id: "sync" });
+      return;
+    }
+    if (cmd === "viz") {
+      setScreen({ id: "home", flash: "Branch map is shown on this screen." });
+      return;
+    }
+
+    const known = new Set([
+      "init",
+      "pr",
+      "continue",
+      "switch",
+      "list",
+      "doctor",
+      "help",
+      "config",
+      "bump",
+      "status",
+    ]);
+    if (!known.has(cmd)) {
+      setScreen({
+        id: "notice",
+        message: `Unknown /${cmd} — press ? on the home screen for shortcuts.`,
+      });
+      return;
+    }
+
+    runArgv([cmd, ...rest]);
+  };
+
+  const handleHome = (action: string) => {
+    if (action === "quit") {
+      finish({ kind: "quit" });
+      return;
+    }
+    if (action === "start") {
+      setScreen({ id: "start" });
+      return;
+    }
+    if (action === "finish") {
+      setScreen({ id: "finish" });
+      return;
+    }
+    if (action === "sync") {
+      setScreen({ id: "sync" });
+      return;
+    }
+    runArgv([action]);
+  };
+
+  if (screen.id === "start") {
+    return <StartFlow onCancel={cancelWizard} onDone={runArgv} />;
+  }
+  if (screen.id === "finish") {
+    return <FinishFlow onCancel={cancelWizard} onDone={runArgv} />;
+  }
+  if (screen.id === "sync") {
+    return <SyncFlow onCancel={cancelWizard} onDone={runArgv} />;
+  }
+  if (screen.id === "notice") {
+    return (
+      <PressEnter
+        title="Notice"
+        message={screen.message}
+        onDone={() => setScreen({ id: "home" })}
+      />
+    );
+  }
+
+  return (
+    <HubHome
+      cwd={cwd}
+      flash={screen.flash}
+      onAction={handleHome}
+      onSlash={handleSlash}
+      onQuit={() => finish({ kind: "quit" })}
+    />
+  );
+}
+
+function PressEnter({
+  title,
+  message,
+  onDone,
+}: {
+  title: string;
+  message: string;
+  onDone: () => void;
+}): React.ReactElement {
+  useInput((_ch, key) => {
+    if (key.return || key.escape) onDone();
+  });
+
+  return (
+    <WizardFrame title={title}>
+      <Text color={FG}>{message}</Text>
+      <Box marginTop={1}>
+        <Text color={MUTED}>Press enter to continue</Text>
+        <Text color={ACCENT}> █</Text>
+      </Box>
+    </WizardFrame>
+  );
+}

@@ -92,19 +92,14 @@ export async function run(args: ParsedArgs): Promise<void> {
       dryRun,
       verbose: args.verbose,
     });
-    const { select } = await import("@inquirer/prompts");
-    const chosen = await select({
+    const { selectPrompt } = await import("../prompts.js");
+    targetBranch = await selectPrompt({
       message: "Switch to branch",
-      choices: choices.map((b) => ({
-        name: currentBranchForPicker && b === currentBranchForPicker ? `${b} (current)` : b,
+      options: choices.map((b) => ({
+        label: currentBranchForPicker && b === currentBranchForPicker ? `${b} (current)` : b,
         value: b,
       })),
     });
-
-    if (typeof chosen !== "string") {
-      process.exit(EXIT_USER);
-    }
-    targetBranch = chosen;
   }
 
   const gitOpts = { dryRun, verbose: args.verbose };
@@ -115,21 +110,21 @@ export async function run(args: ParsedArgs): Promise<void> {
   if (args.switchMode !== undefined) {
     whenUncommitted = args.switchMode;
   } else if (!treeClean && isTTY) {
-    const { select: selectPrompt } = await import("@inquirer/prompts");
-    whenUncommitted = await selectPrompt({
+    const { selectPrompt } = await import("../prompts.js");
+    whenUncommitted = await selectPrompt<"move" | "restore" | "clean" | "destroy" | "cancel">({
       message: "Working tree has uncommitted changes. What do you want to do?",
-      choices: [
-        { name: "Move — Move current changes to the target branch", value: "move" as const },
+      options: [
+        { label: "Move — Move current changes to the target branch", value: "move" },
         {
-          name: "Restore — Save changes for this branch; restore target's saved state (if any)",
-          value: "restore" as const,
+          label: "Restore — Save changes for this branch; restore target's saved state (if any)",
+          value: "restore",
         },
-        { name: "Clean — Discard changes and switch clean at HEAD", value: "clean" as const },
+        { label: "Clean — Discard changes and switch clean at HEAD", value: "clean" },
         {
-          name: "Destroy — Delete current branch and switch to the target branch",
-          value: "destroy" as const,
+          label: "Destroy — Delete current branch and switch to the target branch",
+          value: "destroy",
         },
-        { name: "Cancel — Abort switching", value: "cancel" as const },
+        { label: "Cancel — Abort switching", value: "cancel" },
       ],
     });
   } else if (!treeClean) {

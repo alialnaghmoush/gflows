@@ -30,14 +30,21 @@ export function success(message: string): void {
 }
 
 /**
- * Prints a hint line to stdout (dim when TTY). Use after success messages to suggest next steps.
- * Skips color when not a TTY (e.g. CI). Omit when --quiet to keep output minimal.
+ * Whether stderr is a TTY and can safely use ANSI color codes for hints.
+ */
+function isStderrColorCapable(): boolean {
+  return typeof process.stderr.isTTY === "boolean" && process.stderr.isTTY;
+}
+
+/**
+ * Prints a hint line to stderr (dim when TTY). Keeps stdout clean for scripting (`list`, pipes).
+ * Omit when --quiet to keep output minimal.
  *
  * @param message - One-line hint (e.g. "Run gflows start feature <name> to create a branch").
  */
 export function hint(message: string): void {
-  const line = isColorCapable() ? `${DIM}Hint: ${message}${RESET}` : `Hint: ${message}`;
-  console.log(line);
+  const line = isStderrColorCapable() ? `${DIM}Hint: ${message}${RESET}` : `Hint: ${message}`;
+  console.error(line);
 }
 
 const BANNER_INNER_WIDTH = 42;

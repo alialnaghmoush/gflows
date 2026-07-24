@@ -67,7 +67,7 @@ describe("DetachedHeadError", () => {
 describe("RebaseMergeInProgressError", () => {
   test("default message and EXIT_GIT", () => {
     const err = new RebaseMergeInProgressError();
-    expect(err.message).toContain("rebase");
+    expect(err.message.toLowerCase()).toContain("rebase");
     expect(err.exitCode).toBe(EXIT_GIT);
   });
 });

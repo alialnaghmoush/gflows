@@ -6,7 +6,13 @@
 
 import { getPrefixForType, resolveConfig } from "../config.js";
 import { EXIT_USER, VERSION_REGEX } from "../constants.js";
-import { BranchNotFoundError, DirtyWorkingTreeError, InvalidVersionError } from "../errors.js";
+import {
+  BranchExistsError,
+  BranchNotFoundError,
+  DirtyWorkingTreeError,
+  InvalidVersionError,
+} from "../errors.js";
+import { getBaseBranchName } from "../flow.js";
 import {
   assertNoRebaseOrMerge,
   assertNotDetached,
@@ -19,35 +25,30 @@ import {
   runGit,
   validateBranchName,
 } from "../git.js";
+import { promptStartArgs } from "../interactive.js";
 import { hint, success } from "../out.js";
-import type { BranchType, ParsedArgs } from "../types.js";
-
-/**
- * Returns the base branch name for the given type and fromMain flag (main vs dev).
- */
-function getBaseBranch(type: BranchType, fromMain: boolean, main: string, dev: string): string {
-  if (type === "hotfix") return main;
-  if (type === "bugfix" && fromMain) return main;
-  return dev;
-}
+import type { ParsedArgs } from "../types.js";
 
 /**
  * Runs the start command: validate pre-conditions, ensure base exists, create branch, optional push.
- * Pre-checks: repo is git, not detached HEAD, no rebase/merge in progress, working tree clean (or --force), base exists.
- * Requires type and name (exit 1 if missing). For release/hotfix, name must match vX.Y.Z or X.Y.Z.
- *
- * @param args - Parsed CLI args (cwd, type, name, push, noPush, remote, dryRun, verbose, quiet, force, fromMain).
  */
 export async function run(args: ParsedArgs): Promise<void> {
-  if (!args.type || args.name === undefined || args.name === "") {
+  let type = args.type;
+  let name = args.name?.trim();
+
+  if ((!type || !name) && process.stdin.isTTY) {
+    const prompted = await promptStartArgs();
+    type = type ?? prompted.type;
+    name = name || prompted.name;
+  }
+
+  if (!type || name === undefined || name === "") {
     console.error(
       "gflows start: requires type and name (e.g. gflows start feature my-feat). Use 'gflows help' for usage.",
     );
     process.exit(EXIT_USER);
   }
 
-  const type = args.type;
-  const name = args.name.trim();
   const repoRoot = await resolveRepoRoot(args.cwd);
   const config = resolveConfig(
     repoRoot,
@@ -60,11 +61,9 @@ export async function run(args: ParsedArgs): Promise<void> {
     verbose: args.verbose,
   };
 
-  // Pre-checks: not detached HEAD, no rebase/merge in progress
   await assertNotDetached(repoRoot);
   assertNoRebaseOrMerge(repoRoot);
 
-  // Working tree clean or --force
   if (!args.force) {
     const clean = await isClean(repoRoot, { dryRun: false, verbose: opts.verbose });
     if (!clean) {
@@ -72,7 +71,6 @@ export async function run(args: ParsedArgs): Promise<void> {
     }
   }
 
-  // Validate name: version for release/hotfix, branch name for others
   if (type === "release" || type === "hotfix") {
     if (!VERSION_REGEX.test(name)) {
       throw new InvalidVersionError(
@@ -83,15 +81,18 @@ export async function run(args: ParsedArgs): Promise<void> {
     validateBranchName(name);
   }
 
-  const base = getBaseBranch(type, args.fromMain, config.main, config.dev);
+  const fromMain =
+    args.fromMain ||
+    (typeof args.from === "string" && (args.from === config.main || args.from === "main"));
 
-  // Ensure base exists (local or create from remote after fetch)
-  let _baseExists = false;
+  const base =
+    typeof args.from === "string" && args.from !== "main" && args.from !== config.main
+      ? args.from
+      : getBaseBranchName(type, fromMain, config);
+
   try {
     await revParse(repoRoot, base, [], { dryRun: false, verbose: opts.verbose });
-    _baseExists = true;
   } catch {
-    // Fetch and try remote ref
     await fetch(repoRoot, config.remote, opts);
     const remoteRef = `${config.remote}/${base}`;
     try {
@@ -99,7 +100,6 @@ export async function run(args: ParsedArgs): Promise<void> {
       if (!opts.dryRun) {
         await runGit(["branch", base, remoteRef], { cwd: repoRoot, ...opts, dryRun: false });
       }
-      _baseExists = true;
     } catch {
       throw new BranchNotFoundError(
         `Base branch '${base}' not found locally or on ${config.remote}. Create it or push it first.`,
@@ -112,8 +112,9 @@ export async function run(args: ParsedArgs): Promise<void> {
 
   const branches = await branchList(repoRoot, { ...opts, dryRun: false });
   if (branches.includes(fullBranchName)) {
-    throw new BranchNotFoundError(
-      `Branch '${fullBranchName}' already exists. Use a different name or switch to it.`,
+    throw new BranchExistsError(
+      `Branch '${fullBranchName}' already exists.`,
+      `Use a different name, or: gflows switch ${fullBranchName}`,
     );
   }
 
@@ -138,7 +139,8 @@ export async function run(args: ParsedArgs): Promise<void> {
   }
 
   if (!args.quiet && !args.dryRun) {
-    // Hint: suggest next step — merge branch when done
-    hint(`When done, run gflows finish ${type} to merge into the target branch.`);
+    hint(
+      `Commit your work, then gflows sync or gflows finish ${type}. Interactive: just run gflows`,
+    );
   }
 }

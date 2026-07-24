@@ -12,10 +12,20 @@ const COMMANDS = [
   "init",
   "start",
   "finish",
+  "sync",
+  "pr",
+  "viz",
   "switch",
   "delete",
   "list",
   "bump",
+  "doctor",
+  "config",
+  "schema",
+  "continue",
+  "undo",
+  "abort",
+  "mcp",
   "completion",
   "status",
   "help",
@@ -66,9 +76,9 @@ _gflows() {
       fi
     done
     if [[ -n "$path" ]]; then
-      gflows -C "$path" list 2>/dev/null
+      gflows -C "$path" list -q 2>/dev/null
     else
-      gflows list 2>/dev/null
+      gflows list -q 2>/dev/null
     fi
   }
 
@@ -145,7 +155,7 @@ _gflows_list_branches() {
     fi
     (( i++ ))
   done
-  (( ${D}#path[@]} > 0 )) && gflows "${D}path[@]}" list 2>/dev/null || gflows list 2>/dev/null
+  (( ${D}#path[@]} > 0 )) && gflows "${D}path[@]}" list -q 2>/dev/null || gflows list -q 2>/dev/null
 }
 
 _gflows() {
@@ -231,7 +241,7 @@ function __gflows_list_branches
   if test -n "$path"
     gflows -C "$path" list 2>/dev/null
   else
-    gflows list 2>/dev/null
+    gflows list -q 2>/dev/null
   end
 end
 

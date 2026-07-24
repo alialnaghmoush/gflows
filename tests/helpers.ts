@@ -62,7 +62,8 @@ export async function createTempRepo(): Promise<string> {
     GIT_COMMITTER_NAME: "Test",
     GIT_COMMITTER_EMAIL: "test@test.local",
   };
-  const p = Bun.spawn(["git", "init", "-b", "main"], {
+  // Empty template skips writing .git/hooks (often blocked in sandboxes / restricted FS).
+  const p = Bun.spawn(["git", "init", "-b", "main", "--template="], {
     cwd: dir,
     stdout: "pipe",
     stderr: "pipe",

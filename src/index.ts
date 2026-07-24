@@ -28,6 +28,7 @@ export {
   VERSION_REGEX,
 } from "./constants.js";
 export {
+  BranchExistsError,
   BranchNotFoundError,
   CannotDeleteMainOrDevError,
   DetachedHeadError,
@@ -37,9 +38,17 @@ export {
   InvalidBranchNameError,
   InvalidVersionError,
   MergeConflictError,
+  NothingToFinishError,
   NotRepoError,
+  printError,
   RebaseMergeInProgressError,
 } from "./errors.js";
+export {
+  classifyBranch,
+  formatMergeTarget,
+  parseBranchTypeAndVersion,
+  resolveMergeTarget,
+} from "./flow.js";
 export type { GitOptions, GitRunOptions, GitRunResult } from "./git.js";
 export {
   assertNoRebaseOrMerge,
@@ -64,6 +73,9 @@ export {
   tagExists,
   validateBranchName,
 } from "./git.js";
+export { parse } from "./parse.js";
+export type { RecommendAction, Recommendation } from "./recommend.js";
+export { recommend } from "./recommend.js";
 export type {
   BranchPrefixes,
   BranchType,
@@ -77,4 +89,15 @@ export type {
   ParsedArgs,
   ResolvedConfig,
 } from "./types.js";
-export { BRANCH_TYPE_SHORTS } from "./types.js";
+export { ALL_COMMANDS, BRANCH_TYPE_SHORTS } from "./types.js";
+export { paint, renderPanel, section } from "./ui.js";
+export type { VizBranchRow, VizSnapshot } from "./viz.js";
+export {
+  collectVizSnapshot,
+  printViz,
+  renderBranchMap,
+  renderFlowLegend,
+  renderLifecycle,
+  renderVizPanel,
+  renderYouAreHere,
+} from "./viz.js";

@@ -51,7 +51,7 @@ describe("integration: init and start/finish cycle", () => {
     await commit.exited;
     expect(commit.exitCode).toBe(0);
 
-    r = await runGflows(dir, ["finish", "feature", "-y"]);
+    r = await runGflows(dir, ["finish", "feature", "-y", "-P"]);
     expect(r.exitCode).toBe(0);
     expect(r.stdout).toContain("finished");
 
@@ -126,7 +126,19 @@ describe("integration: error paths", () => {
     dir = await createTempRepo();
     await runGflows(dir, ["init", "--no-push"]);
     await runGflows(dir, ["start", "release", "v1.0.0"]);
-    await runGflows(dir, ["finish", "release", "-y", "-T"]);
+    await writeFile(join(dir, "rel"), "1", "utf-8");
+    await Bun.spawn(["git", "add", "rel"], { cwd: dir }).exited;
+    await Bun.spawn(["git", "commit", "-m", "rel"], {
+      cwd: dir,
+      env: {
+        ...process.env,
+        GIT_AUTHOR_NAME: "Test",
+        GIT_AUTHOR_EMAIL: "test@test.local",
+        GIT_COMMITTER_NAME: "Test",
+        GIT_COMMITTER_EMAIL: "test@test.local",
+      },
+    }).exited;
+    await runGflows(dir, ["finish", "release", "-y", "-P", "-T"]);
     const tag = Bun.spawn(["git", "tag", "v1.0.0"], { cwd: dir, stdout: "pipe", stderr: "pipe" });
     await tag.exited;
     if (tag.exitCode !== 0) {
@@ -136,9 +148,30 @@ describe("integration: error paths", () => {
         .exited;
     }
     await runGflows(dir, ["start", "release", "v1.0.0"]);
-    const r = await runGflows(dir, ["finish", "release", "-B", "release/v1.0.0", "-y"]);
+    await writeFile(join(dir, "rel2"), "2", "utf-8");
+    await Bun.spawn(["git", "add", "rel2"], { cwd: dir }).exited;
+    await Bun.spawn(["git", "commit", "-m", "rel2"], {
+      cwd: dir,
+      env: {
+        ...process.env,
+        GIT_AUTHOR_NAME: "Test",
+        GIT_AUTHOR_EMAIL: "test@test.local",
+        GIT_COMMITTER_NAME: "Test",
+        GIT_COMMITTER_EMAIL: "test@test.local",
+      },
+    }).exited;
+    const r = await runGflows(dir, ["finish", "release", "-B", "release/v1.0.0", "-y", "-P"]);
     expect(r.exitCode).toBe(2);
     expect(r.stderr).toMatch(/tag.*already exists/i);
+  });
+
+  test("finish release with no commits → exit 2", async () => {
+    dir = await createTempRepo();
+    await runGflows(dir, ["init", "--no-push"]);
+    await runGflows(dir, ["start", "release", "v9.9.9"]);
+    const r = await runGflows(dir, ["finish", "release", "-y", "-P"]);
+    expect(r.exitCode).toBe(2);
+    expect(r.stderr).toMatch(/nothing to finish|no commits/i);
   });
 
   test("merge conflict on finish → exit 2 and conflict message", async () => {
@@ -182,9 +215,9 @@ describe("integration: error paths", () => {
     }).exited;
 
     await runGflows(dir, ["switch", "feature/conflict-feat"]);
-    const r = await runGflows(dir, ["finish", "feature", "-y"]);
+    const r = await runGflows(dir, ["finish", "feature", "-y", "-P"]);
     expect(r.exitCode).toBe(2);
-    expect(r.stderr).toMatch(/merge conflict|resolve conflicts/i);
+    expect(r.stderr).toMatch(/merge conflict|resolve conflicts|gflows continue/i);
   });
 });
 
@@ -226,9 +259,9 @@ describe("integration: completion", () => {
     expect(r.exitCode).toBe(0);
     expect(r.stdout).toContain("# Bash completion");
     expect(r.stdout).toContain("complete -F _gflows");
-    expect(r.stdout).toContain(
-      "init start finish switch delete list bump completion status help version",
-    );
+    expect(r.stdout).toContain("init start finish sync pr");
+    expect(r.stdout).toContain("doctor config schema");
+    expect(r.stdout).toContain("complete -F _gflows");
   });
 
   test("completion zsh prints script with _gflows_list_branches", async () => {

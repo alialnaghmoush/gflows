@@ -1,0 +1,22 @@
+# gflows
+
+> Lightweight Bun/TypeScript CLI for main+dev Git branching workflows (feature, bugfix, chore, release, hotfix, spike).
+
+## Docs
+
+- [AGENTS.md](AGENTS.md): instructions for coding agents (recipes, exit codes, MCP)
+- [README.md](README.md): human quick start, command reference, flowcharts
+- Machine catalog: run `gflows schema` (JSON)
+
+## Key commands
+
+- `gflows` (TTY): Ink fullscreen hub (frame, tips, actions, `/` slash commands, status bar); Clack prompts
+- `gflows viz`: scrollback status panel — lifecycle, branches, recommended next step
+- `gflows init` / `start` / `finish` / `sync` / `pr`
+- `gflows continue` / `undo` / `abort` — recovery after conflicts
+- `gflows doctor` / `config` / `status --json` / `mcp`
+
+## Package
+
+- npm: `gflows`
+- JSR: `@alialnaghmoush/gflows`

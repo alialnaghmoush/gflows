@@ -33,11 +33,10 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 # Finder (MacOS) folder config
 .DS_Store
 
-# lock
+# lock (other package managers)
 package-lock.json
 yarn.lock
 pnpm-lock.yaml
-bun.lock
-
 
 .cursor/plans
+tmp-test-repos

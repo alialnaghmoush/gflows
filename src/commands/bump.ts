@@ -195,20 +195,20 @@ export async function run(args: ParsedArgs): Promise<void> {
     );
     process.exit(EXIT_USER);
   } else {
-    const { select } = await import("@inquirer/prompts");
-    direction = await select({
+    const { selectPrompt } = await import("../prompts.js");
+    direction = await selectPrompt<"up" | "down">({
       message: "Direction",
-      choices: [
-        { name: "Up (bump)", value: "up" as const },
-        { name: "Down (rollback)", value: "down" as const },
+      options: [
+        { label: "Up (bump)", value: "up" },
+        { label: "Down (rollback)", value: "down" },
       ],
     });
-    type = await select({
+    type = await selectPrompt<"patch" | "minor" | "major">({
       message: "Type",
-      choices: [
-        { name: "patch (x.y.Z)", value: "patch" as const },
-        { name: "minor (x.Y.0)", value: "minor" as const },
-        { name: "major (X.0.0)", value: "major" as const },
+      options: [
+        { label: "patch (x.y.Z)", value: "patch" },
+        { label: "minor (x.Y.0)", value: "minor" },
+        { label: "major (X.0.0)", value: "major" },
       ],
     });
   }

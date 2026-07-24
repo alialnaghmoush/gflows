@@ -1,59 +1,26 @@
 /**
- * Status command: show current branch flow info.
- * Classifies branch (feature/bugfix/chore/release/hotfix/spike or unknown),
- * shows base and merge target(s), and optionally ahead/behind vs base.
- * No write operations.
+ * Status command: show current branch flow info and recovery hints.
  * @module commands/status
  */
 
-import { getBranchTypeMeta, resolveConfig } from "../config.js";
+import { resolveConfig } from "../config.js";
 import { NotRepoError } from "../errors.js";
+import {
+  classifyBranch,
+  formatMergeTarget,
+  getBaseBranchName,
+  resolveMergeTarget,
+} from "../flow.js";
 import { getAheadBehind, getCurrentBranch, resolveRepoRoot } from "../git.js";
 import { hint } from "../out.js";
-import type { BranchType, ParsedArgs, ResolvedConfig } from "../types.js";
-
-const BRANCH_TYPES: BranchType[] = ["feature", "bugfix", "chore", "release", "hotfix", "spike"];
-
-/**
- * Classifies a branch name into a workflow type, "main", "dev", or null (unknown).
- * Uses resolved config for main/dev names and prefixes.
- */
-function classifyBranch(
-  branchName: string,
-  config: ResolvedConfig,
-): BranchType | "main" | "dev" | null {
-  if (branchName === config.main) return "main";
-  if (branchName === config.dev) return "dev";
-  const { prefixes } = config;
-  for (const type of BRANCH_TYPES) {
-    const prefix = prefixes[type];
-    if (prefix && branchName.startsWith(prefix)) {
-      return type;
-    }
-  }
-  return null;
-}
-
-/**
- * Formats merge target for display (actual branch names).
- */
-function formatMergeTarget(
-  mergeTarget: "main" | "dev" | "main-then-dev",
-  config: ResolvedConfig,
-): string {
-  if (mergeTarget === "main-then-dev") {
-    return `${config.main}, then ${config.dev}`;
-  }
-  return mergeTarget === "main" ? config.main : config.dev;
-}
+import { readActiveRun } from "../run-state.js";
+import type { ParsedArgs } from "../types.js";
 
 /**
  * Runs the status command.
- * Shows current branch, classification, base, merge target(s), and ahead/behind vs base.
- * Output goes to stdout for scripts. On detached HEAD or non-repo, reports clearly and exits.
  */
 export async function run(args: ParsedArgs): Promise<void> {
-  const { cwd, dryRun, verbose, quiet } = args;
+  const { cwd, dryRun, verbose, quiet, json } = args;
 
   const root = await resolveRepoRoot(cwd).catch((err: unknown) => {
     if (err instanceof NotRepoError) throw err;
@@ -70,22 +37,62 @@ export async function run(args: ParsedArgs): Promise<void> {
     verbose: !!verbose,
   });
 
-  if (current === null) {
-    if (!quiet) {
-      console.log("HEAD is detached.");
+  const active = readActiveRun(root);
+
+  if (json) {
+    const payload: Record<string, unknown> = {
+      branch: current,
+      suspended: active
+        ? { command: active.command, status: active.status, nextStep: active.nextStep }
+        : null,
+    };
+    if (current) {
+      const classification = classifyBranch(current, config);
+      payload.type = classification;
+      if (classification && classification !== "main" && classification !== "dev") {
+        const mergeTarget = await resolveMergeTarget(root, current, classification, config, {
+          dryRun: !!dryRun,
+          verbose: !!verbose,
+        });
+        const base = getBaseBranchName(classification, false, config);
+        const ab = await getAheadBehind(root, base, current, {
+          dryRun: !!dryRun,
+          verbose: !!verbose,
+        });
+        payload.base = base;
+        payload.mergeTarget = mergeTarget;
+        payload.mergeTargetDisplay = formatMergeTarget(mergeTarget, config);
+        payload.ahead = ab.ahead;
+        payload.behind = ab.behind;
+      }
     }
+    console.log(JSON.stringify(payload, null, 2));
     return;
   }
 
-  const classification = classifyBranch(current, config);
+  if (active && !quiet) {
+    console.log(`Suspended: ${active.command} (${active.status})`);
+    hint("Run gflows continue after resolving conflicts, or gflows abort / undo.");
+  }
+
+  if (current === null) {
+    if (!quiet) {
+      console.log("HEAD is detached.");
+      hint("Try: git checkout dev");
+    }
+    return;
+  }
 
   if (!quiet) {
     console.log(`Branch: ${current}`);
   }
 
+  const classification = classifyBranch(current, config);
+
   if (classification === "main") {
     if (!quiet) {
       console.log("Type: long-lived (main)");
+      hint("Run gflows start feature <name> or gflows start hotfix vX.Y.Z");
     }
     return;
   }
@@ -93,6 +100,7 @@ export async function run(args: ParsedArgs): Promise<void> {
   if (classification === "dev") {
     if (!quiet) {
       console.log("Type: long-lived (dev)");
+      hint("Run gflows start feature <name> to begin work.");
     }
     return;
   }
@@ -100,13 +108,21 @@ export async function run(args: ParsedArgs): Promise<void> {
   if (classification === null) {
     if (!quiet) {
       console.log("Type: unknown");
+      hint("Use a typed prefix (feature/, bugfix/, …) or gflows start …");
     }
     return;
   }
 
-  const meta = getBranchTypeMeta(classification);
-  const baseBranch = meta.base === "main" ? config.main : config.dev;
-  const mergeTargetDisplay = formatMergeTarget(meta.mergeTarget, config);
+  const mergeTarget = await resolveMergeTarget(root, current, classification, config, {
+    dryRun: !!dryRun,
+    verbose: !!verbose,
+  });
+  const baseBranch = getBaseBranchName(
+    classification,
+    mergeTarget === "main-then-dev" && classification === "bugfix",
+    config,
+  );
+  const mergeTargetDisplay = formatMergeTarget(mergeTarget, config);
 
   if (!quiet) {
     console.log(`Type: ${classification}`);
@@ -121,7 +137,10 @@ export async function run(args: ParsedArgs): Promise<void> {
 
   if (!quiet) {
     console.log(`Ahead/behind: ${ahead} ahead, ${behind} behind`);
-    // Hint: suggest next step — finish current branch
-    hint(`Run gflows finish ${classification} to merge into ${mergeTargetDisplay}.`);
+    if (ahead === 0) {
+      hint("No commits to finish yet — commit changes first.");
+    } else {
+      hint(`Run gflows finish ${classification} to merge into ${mergeTargetDisplay}.`);
+    }
   }
 }

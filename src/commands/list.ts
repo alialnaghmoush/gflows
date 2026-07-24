@@ -71,12 +71,17 @@ export async function run(args: ParsedArgs): Promise<void> {
   const mainAndDev = [config.main, config.dev].filter((b) => allBranches.includes(b));
   const sorted = [...mainAndDev, ...[...workflowBranches].sort()];
 
+  if (args.json) {
+    console.log(JSON.stringify({ branches: sorted }, null, 2));
+    return;
+  }
+
   for (const b of sorted) {
     console.log(b);
   }
 
   if (!quiet && sorted.length > 0) {
-    // Hint: suggest switching to a listed branch
+    // Hint on stderr — stdout stays script-friendly
     hint("Use gflows switch <branch> to switch to a branch.");
   }
 }

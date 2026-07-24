@@ -198,16 +198,34 @@ export async function checkout(
 export async function merge(
   cwd: string,
   ref: string,
-  options: GitRunOptions & { noFf?: boolean } = {},
+  options: GitRunOptions & { noFf?: boolean; message?: string; squash?: boolean } = {},
 ): Promise<void> {
-  const { noFf = false, ...opts } = options;
-  const args = noFf ? ["merge", "--no-ff", ref] : ["merge", ref];
+  const { noFf = false, message, squash = false, ...opts } = options;
+  const args = ["merge"];
+  if (squash) args.push("--squash");
+  else if (noFf) args.push("--no-ff");
+  if (message && !squash) args.push("-m", message);
+  args.push(ref);
   const result = await runGit(args, { cwd, ...opts });
 
   if (result.exitCode !== 0) {
-    const hint =
-      "Resolve conflicts in the working tree, then run `git add` and `git merge --continue`, or `git merge --abort` to cancel. Re-run `gflows finish` after resolving if needed.";
-    throw new MergeConflictError(`Merge conflict while merging ${ref}. ${hint}`);
+    throw new MergeConflictError(
+      `Merge conflict while merging ${ref}.`,
+      "Resolve conflicts, then: gflows continue. Or: gflows abort / gflows undo.",
+    );
+  }
+
+  if (squash && !opts.dryRun) {
+    const commitArgs = message
+      ? ["commit", "-m", message]
+      : ["commit", "-m", `Squash merge ${ref}`];
+    const commitResult = await runGit(commitArgs, { cwd, ...opts });
+    if (commitResult.exitCode !== 0) {
+      throw new MergeConflictError(
+        `Squash merge of ${ref} staged but commit failed.`,
+        commitResult.stderr.trim() || "Check git status and commit manually, then gflows continue.",
+      );
+    }
   }
 }
 
@@ -294,11 +312,120 @@ export async function tagExists(
 export async function deleteBranch(
   cwd: string,
   branch: string,
-  options: GitRunOptions = {},
+  options: GitRunOptions & { force?: boolean } = {},
 ): Promise<void> {
-  const result = await runGit(["branch", "-d", branch], { cwd, ...options });
+  const flag = options.force ? "-D" : "-d";
+  const result = await runGit(["branch", flag, branch], { cwd, ...options });
   if (result.exitCode !== 0) {
     throw new BranchNotFoundError(result.stderr.trim() || `Could not delete branch '${branch}'.`);
+  }
+}
+
+/**
+ * Deletes a remote branch (git push remote --delete branch).
+ *
+ * @param cwd - Repo root.
+ * @param remote - Remote name.
+ * @param branch - Branch name on remote.
+ * @param options - dryRun, verbose.
+ * @returns Exit code from git push.
+ */
+export async function deleteRemoteBranch(
+  cwd: string,
+  remote: string,
+  branch: string,
+  options: GitRunOptions = {},
+): Promise<number> {
+  const result = await runGit(["push", remote, "--delete", branch], { cwd, ...options });
+  return result.exitCode;
+}
+
+/**
+ * Returns the merge-base SHA of two refs, or null if unavailable.
+ */
+export async function getMergeBase(
+  cwd: string,
+  a: string,
+  b: string,
+  options: GitRunOptions = {},
+): Promise<string | null> {
+  const result = await runGit(["merge-base", a, b], { cwd, ...options });
+  if (result.exitCode !== 0) return null;
+  const sha = result.stdout.trim();
+  return sha.length > 0 ? sha : null;
+}
+
+/**
+ * Returns true if `ancestor` is an ancestor of `commit` (git merge-base --is-ancestor).
+ */
+export async function isAncestor(
+  cwd: string,
+  ancestor: string,
+  commit: string,
+  options: GitRunOptions = {},
+): Promise<boolean> {
+  const result = await runGit(["merge-base", "--is-ancestor", ancestor, commit], {
+    cwd,
+    ...options,
+  });
+  return result.exitCode === 0;
+}
+
+/**
+ * Aborts an in-progress merge if MERGE_HEAD exists.
+ */
+export async function mergeAbort(cwd: string, options: GitRunOptions = {}): Promise<void> {
+  await runGit(["merge", "--abort"], { cwd, ...options });
+}
+
+/**
+ * Aborts an in-progress rebase if one is active.
+ */
+export async function rebaseAbort(cwd: string, options: GitRunOptions = {}): Promise<void> {
+  await runGit(["rebase", "--abort"], { cwd, ...options });
+}
+
+/**
+ * Deletes a local tag.
+ */
+export async function deleteTag(
+  cwd: string,
+  name: string,
+  options: GitRunOptions = {},
+): Promise<void> {
+  await runGit(["tag", "-d", name], { cwd, ...options });
+}
+
+/**
+ * Returns upstream tracking branch (e.g. origin/feature/x) or null.
+ */
+export async function getUpstream(
+  cwd: string,
+  branch: string,
+  options: GitRunOptions = {},
+): Promise<string | null> {
+  const result = await runGit(["rev-parse", "--abbrev-ref", `${branch}@{upstream}`], {
+    cwd,
+    ...options,
+  });
+  if (result.exitCode !== 0) return null;
+  const up = result.stdout.trim();
+  return up.length > 0 ? up : null;
+}
+
+/**
+ * Resolves a ref to a full SHA, or null if missing.
+ */
+export async function resolveSha(
+  cwd: string,
+  ref: string,
+  options: GitRunOptions = {},
+): Promise<string | null> {
+  try {
+    const out = await revParse(cwd, ref, [], options);
+    return out.trim() || null;
+  } catch {
+    return null;
   }
 }
 

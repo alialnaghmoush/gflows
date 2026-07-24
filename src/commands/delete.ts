@@ -91,13 +91,13 @@ export async function run(args: ParsedArgs): Promise<void> {
     process.exit(EXIT_USER);
   }
 
-  const { checkbox } = await import("@inquirer/prompts");
-  const chosen = await checkbox({
+  const { multiSelectPrompt } = await import("../prompts.js");
+  const chosen = await multiSelectPrompt({
     message: "Delete branch(es)",
-    choices: workflowBranches.map((b) => ({ name: b, value: b })),
+    options: workflowBranches.map((b) => ({ label: b, value: b })),
   });
 
-  if (!Array.isArray(chosen) || chosen.length === 0) {
+  if (chosen.length === 0) {
     if (!quiet) {
       console.error("No branches selected.");
     }

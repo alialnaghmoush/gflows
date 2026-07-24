@@ -34,7 +34,42 @@ export type Command =
   | "completion"
   | "status"
   | "help"
-  | "version";
+  | "version"
+  | "sync"
+  | "pr"
+  | "doctor"
+  | "config"
+  | "schema"
+  | "continue"
+  | "undo"
+  | "abort"
+  | "mcp"
+  | "viz";
+
+/** All CLI commands in display order. */
+export const ALL_COMMANDS: Command[] = [
+  "init",
+  "start",
+  "finish",
+  "switch",
+  "delete",
+  "list",
+  "bump",
+  "sync",
+  "pr",
+  "viz",
+  "doctor",
+  "config",
+  "schema",
+  "continue",
+  "undo",
+  "abort",
+  "completion",
+  "status",
+  "help",
+  "version",
+  "mcp",
+];
 
 /** Branch prefix overrides per type (e.g. "feature" -> "feature/"). */
 export interface BranchPrefixes {
@@ -75,6 +110,9 @@ export type BumpDirection = "up" | "down";
 /** Bump type (semver segment). */
 export type BumpType = "patch" | "minor" | "major";
 
+/** Config subcommand for `gflows config`. */
+export type ConfigAction = "get" | "set";
+
 /** Parsed CLI arguments after resolving command, type, name, and flags. */
 export interface ParsedArgs {
   command: Command;
@@ -92,6 +130,12 @@ export interface ParsedArgs {
   bumpDirection?: BumpDirection;
   /** Bump type (patch | minor | major). */
   bumpType?: BumpType;
+  /** Config get/set action. */
+  configAction?: ConfigAction;
+  /** Config key (main, dev, remote, or prefixes.<type>). */
+  configKey?: string;
+  /** Config value for set. */
+  configValue?: string;
   // Common flags
   push: boolean;
   noPush: boolean;
@@ -107,7 +151,9 @@ export interface ParsedArgs {
   quiet: boolean;
   force: boolean;
   path: string | undefined;
-  // start
+  /** Raw --from / -o value (base branch override). */
+  from: string | undefined;
+  /** True when --from points at main (configured or literal). */
   fromMain: boolean;
   // finish
   noFf: boolean;
@@ -117,8 +163,21 @@ export interface ParsedArgs {
   noTag: boolean;
   tagMessage: string | undefined;
   message: string | undefined;
-  // list
+  squash: boolean;
+  preview: boolean;
+  bumpOnFinish: boolean;
+  // list / status
   includeRemote: boolean;
+  json: boolean;
+  // sync
+  rebase: boolean;
   // switch: explicit mode when uncommitted (overrides prompt)
   switchMode?: "restore" | "clean" | "cancel" | "move" | "destroy";
+  /**
+   * Optional package.json script name to wire to `gflows` during init
+   * (e.g. `"g"` → `bun run g -- start feature x`). Undefined = ask (TTY) or skip.
+   */
+  scriptAlias: string | undefined;
+  /** When true, never add a package.json script alias during init. */
+  noScriptAlias: boolean;
 }
