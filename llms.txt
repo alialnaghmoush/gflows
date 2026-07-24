@@ -14,7 +14,7 @@
 - `gflows viz`: scrollback status panel — lifecycle, branches, recommended next step
 - `gflows init` / `start` / `finish` / `sync` / `pr`
 - `gflows continue` / `undo` / `abort` — recovery after conflicts
-- `gflows doctor` / `config` / `status --json` / `mcp`
+- `gflows doctor` / `info` / `config` / `status --json` / `mcp`
 
 ## Package
 

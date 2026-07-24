@@ -32,6 +32,14 @@ const TOOLS = [
     },
   },
   {
+    name: "gflows_info",
+    description: "Describe repo layout (monolith/monorepo), package versions, and stacks.",
+    inputSchema: {
+      type: "object",
+      properties: { path: { type: "string" } },
+    },
+  },
+  {
     name: "gflows_list",
     description: "List workflow branches.",
     inputSchema: {
@@ -123,6 +131,9 @@ async function runTool(
     case "gflows_doctor":
       argv.push("doctor", "--json");
       break;
+    case "gflows_info":
+      argv.push("info", "--json");
+      break;
     case "gflows_list":
       argv.push("list", "-q");
       if (typeof args.type === "string") argv.push(args.type);
@@ -174,7 +185,7 @@ async function runTool(
  */
 export async function run(_args: ParsedArgs): Promise<void> {
   console.error(
-    "gflows mcp: listening on stdio (JSON-RPC). Tools: status, doctor, list, start, sync, finish, schema.",
+    "gflows mcp: listening on stdio (JSON-RPC). Tools: status, doctor, info, list, start, sync, finish, schema.",
   );
 
   const decoder = new TextDecoder();

@@ -24,6 +24,7 @@ export const SLASH_COMMANDS: readonly SlashCommand[] = [
   { name: "switch", hint: "Switch branch" },
   { name: "list", hint: "List branches" },
   { name: "doctor", hint: "Doctor checks" },
+  { name: "info", hint: "Repo layout & stacks" },
   { name: "help", hint: "Show help" },
   { name: "status", hint: "Repo status" },
   { name: "config", hint: "Show config" },

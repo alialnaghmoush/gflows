@@ -289,7 +289,7 @@ export function HubHome({
           ) : (
             <Text color={MUTED}>
               {showHelp
-                ? "/init /start /sync /pr /finish /doctor /help  ·  esc clear  ·  ctrl+c quit"
+                ? "/init /start /sync /pr /finish /doctor /info /help  ·  esc clear  ·  ctrl+c quit"
                 : "? for shortcuts · / for command menu"}
             </Text>
           )}
@@ -376,6 +376,7 @@ function buildActions(snap: VizSnapshot | null, recommended: RecommendAction | n
   push("switch", "Switch branch", "/switch");
   push("list", "List branches", "/list");
   push("doctor", "Doctor", "/doctor");
+  push("info", "Info", "/info");
   push("help", "Help", "/help");
   push("quit", "Quit", "q");
 

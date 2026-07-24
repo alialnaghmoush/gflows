@@ -27,6 +27,7 @@ Commands:
   status, -t     Show current branch flow info
   viz            Visual branch map + flow (also shown in interactive hub)
   doctor         Repo health checks
+  info           Repo layout, versions, and stacks
   config         get/set .gflows.json
   bump, -U       Bump or rollback package version
   continue       Resume after merge conflict
@@ -53,7 +54,7 @@ Common flags:
   -v, --verbose        Verbose output
   -q, --quiet          Minimal output
   -C, --path <dir>     Run as if in <dir>
-  --json               Machine-readable output (status/list/doctor/config)
+  --json               Machine-readable output (status/list/doctor/info/config)
 
 Init:   --script-alias <name>  Add package.json script (e.g. g → "gflows")
         --no-script-alias      Never add a script alias

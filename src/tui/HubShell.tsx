@@ -18,7 +18,7 @@ import {
 import { HubHome } from "./HubHome.js";
 import { WizardFrame } from "./prompts.js";
 import { SLASH_COMMANDS } from "./slash.js";
-import { ConfigView, DoctorView, HelpView, StatusView, VersionView } from "./views.js";
+import { ConfigView, DoctorView, HelpView, InfoView, StatusView, VersionView } from "./views.js";
 
 const ACCENT = "#E88C4A";
 const MUTED = "#8A8A8A";
@@ -37,6 +37,7 @@ type Screen =
   | { id: "init" }
   | { id: "bump" }
   | { id: "doctor" }
+  | { id: "info" }
   | { id: "help" }
   | { id: "status" }
   | { id: "config" }
@@ -103,6 +104,9 @@ export function HubShell({ cwd, onDone }: HubShellProps): React.ReactElement {
         return true;
       case "doctor":
         setScreen({ id: "doctor" });
+        return true;
+      case "info":
+        setScreen({ id: "info" });
         return true;
       case "help":
         setScreen({ id: "help" });
@@ -230,6 +234,9 @@ export function HubShell({ cwd, onDone }: HubShellProps): React.ReactElement {
   }
   if (screen.id === "doctor") {
     return <DoctorView cwd={cwd} onDone={cancelWizard} />;
+  }
+  if (screen.id === "info") {
+    return <InfoView cwd={cwd} onDone={cancelWizard} />;
   }
   if (screen.id === "help") {
     return <HelpView onDone={cancelWizard} />;

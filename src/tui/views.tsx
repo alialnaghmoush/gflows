@@ -1,5 +1,5 @@
 /**
- * Read-only Ink screens that stay inside the hub (doctor / help / status / config).
+ * Read-only Ink screens that stay inside the hub (doctor / info / help / status / config).
  * @module tui/views
  */
 
@@ -7,9 +7,11 @@ import type React from "react";
 import { useEffect, useState } from "react";
 import { collectDoctorReport } from "../commands/doctor.js";
 import { getHelpText } from "../commands/help.js";
+import { collectInfo } from "../commands/info.js";
 import { collectStatusLines } from "../commands/status-lines.js";
 import { resolveConfig } from "../config.js";
 import { resolveRepoRoot } from "../git.js";
+import { formatInfoReport } from "../repo-inspect.js";
 import { getVersion } from "../version.js";
 import { type HubPanelLine, HubScrollPanel } from "./panels.js";
 
@@ -58,6 +60,45 @@ export function DoctorView({
   }, [cwd]);
 
   return <HubScrollPanel title="Doctor" lines={lines} error={error} onDone={onDone} />;
+}
+
+/**
+ * Repo layout / versions / stacks inside the hub.
+ */
+export function InfoView({ cwd, onDone }: { cwd: string; onDone: () => void }): React.ReactElement {
+  const [lines, setLines] = useState<HubPanelLine[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const report = await collectInfo(cwd);
+        if (cancelled) return;
+        const rows: HubPanelLine[] = formatInfoReport(report).map((text, i) => ({
+          id: `i${i}`,
+          text: text.length === 0 ? " " : text,
+          tone:
+            text.startsWith("Repo:") ||
+            text.startsWith("Frontend:") ||
+            text.startsWith("Fullstack:")
+              ? "accent"
+              : "default",
+        }));
+        setLines(rows);
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : String(err));
+          setLines([]);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [cwd]);
+
+  return <HubScrollPanel title="Info" lines={lines} error={error} onDone={onDone} />;
 }
 
 /**

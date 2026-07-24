@@ -5,46 +5,15 @@
  * @module commands/bump
  */
 
-import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { EXIT_OK, EXIT_USER } from "../constants.js";
 import { InvalidVersionError } from "../errors.js";
 import { hint, success } from "../out.js";
+import { findPackageRoots, PACKAGE_JSON } from "../packages.js";
 import type { BumpDirection, BumpType, ParsedArgs } from "../types.js";
 
-const PACKAGE_JSON = "package.json";
 const JSR_JSON = "jsr.json";
-
-/** Directory names to skip when discovering package roots (monorepo). */
-const SKIP_DIRS = new Set(["node_modules", ".git"]);
-
-/**
- * Recursively finds all directories under `root` that contain a package.json.
- * Skips node_modules and .git.
- */
-function findPackageRoots(root: string): string[] {
-  const acc: string[] = [];
-  if (!existsSync(root) || !statSync(root, { throwIfNoEntry: false })?.isDirectory()) {
-    return acc;
-  }
-  if (existsSync(join(root, PACKAGE_JSON))) {
-    acc.push(root);
-  }
-  let entries: Array<{ isDirectory(): boolean; name: string }>;
-  try {
-    entries = readdirSync(root, { withFileTypes: true }) as Array<{
-      isDirectory(): boolean;
-      name: string;
-    }>;
-  } catch {
-    return acc;
-  }
-  for (const e of entries) {
-    if (!e.isDirectory() || SKIP_DIRS.has(e.name)) continue;
-    acc.push(...findPackageRoots(join(root, e.name)));
-  }
-  return acc;
-}
 
 /** Semver triplet. */
 interface Semver {

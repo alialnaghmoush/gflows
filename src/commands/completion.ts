@@ -20,6 +20,7 @@ const COMMANDS = [
   "list",
   "bump",
   "doctor",
+  "info",
   "config",
   "schema",
   "continue",
@@ -260,6 +261,8 @@ complete -c gflows -f -n "not __fish_seen_subcommand_from ${COMMANDS.join(" ")}"
   -a "list" -d "List branches by type"
 complete -c gflows -f -n "not __fish_seen_subcommand_from ${COMMANDS.join(" ")}" \\
   -a "bump" -d "Bump or rollback version"
+complete -c gflows -f -n "not __fish_seen_subcommand_from ${COMMANDS.join(" ")}" \\
+  -a "info" -d "Repo layout, versions, and stacks"
 complete -c gflows -f -n "not __fish_seen_subcommand_from ${COMMANDS.join(" ")}" \\
   -a "completion" -d "Print shell completion script"
 complete -c gflows -f -n "not __fish_seen_subcommand_from ${COMMANDS.join(" ")}" \\

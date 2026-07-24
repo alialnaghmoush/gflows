@@ -86,6 +86,7 @@ function buildLegacyOptions(
     { value: "list", label: "List branches" },
     { value: "viz", label: "Refresh map" },
     { value: "doctor", label: "Doctor (check setup)" },
+    { value: "info", label: "Info (layout & stacks)" },
     { value: "config", label: "Config" },
     { value: "bump", label: "Bump version" },
     { value: "continue", label: "Continue suspended operation" },

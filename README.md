@@ -231,6 +231,7 @@ Hub: `g` → select the action. Typed short form assumes `alias g=gflows`.
 | `gflows abort` | — |
 | `gflows undo` | — |
 | `gflows doctor` | — |
+| `gflows info` | — |
 
 
 
@@ -274,6 +275,7 @@ Bare `gflows` / `g` in a **TTY** opens the Ink hub (see [Way 1](#way-1--hub-reco
 | `status` `-t`                 | Current branch flow info                    |
 | `viz`                         | Scrollback visual map                       |
 | `doctor`                      | Health checks                               |
+| `info`                        | Layout, versions, frontend/backend stacks   |
 | `config`                      | `get` / `set` `.gflows.json`                |
 | `bump` `-U`                   | Version bump/rollback in package files      |
 | `continue` / `abort` / `undo` | Recovery                                    |
@@ -395,6 +397,7 @@ Rules of thumb:
 | `gflows finish feature -y -P` | `g -F -f -y -P` |
 | `gflows status --json` | `g -t --json` |
 | `gflows doctor --json` | — |
+| `gflows info --json` | — |
 
 **Exit codes:** `0` ok · `1` usage/validation · `2` git/system (conflict, dirty tree, empty finish, …)
 

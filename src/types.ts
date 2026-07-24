@@ -38,6 +38,7 @@ export type Command =
   | "sync"
   | "pr"
   | "doctor"
+  | "info"
   | "config"
   | "schema"
   | "continue"
@@ -59,6 +60,7 @@ export const ALL_COMMANDS: Command[] = [
   "pr",
   "viz",
   "doctor",
+  "info",
   "config",
   "schema",
   "continue",

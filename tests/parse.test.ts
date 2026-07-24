@@ -70,6 +70,7 @@ describe("parse kebab-case flags", () => {
     expect(parse(["sync"]).command).toBe("sync");
     expect(parse(["pr"]).command).toBe("pr");
     expect(parse(["doctor"]).command).toBe("doctor");
+    expect(parse(["info"]).command).toBe("info");
     expect(parse(["viz"]).command).toBe("viz");
     expect(parse(["init", "--script-alias", "g"]).scriptAlias).toBe("g");
     expect(parse(["init", "--no-script-alias"]).noScriptAlias).toBe(true);

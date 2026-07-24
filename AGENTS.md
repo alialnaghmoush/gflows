@@ -9,7 +9,7 @@ gflows is a **local Git branching workflow CLI** (main + dev + typed short-lived
 3. **Do not finish empty branches** — if there are no commits beyond the merge target, finish exits `2`. Commit first.
 4. **Conflicts** — resolve files, then `gflows continue`. Or `gflows abort` / `gflows undo`.
 5. **Discover the API** — run `gflows schema` (JSON) or read this file + README.
-6. **MCP** — `gflows mcp` (stdio JSON-RPC) exposes status/doctor/list/start/sync/finish/schema tools.
+6. **MCP** — `gflows mcp` (stdio JSON-RPC) exposes status/doctor/info/list/start/sync/finish/schema tools.
 7. **Hub / viz** — bare `gflows` (TTY) opens an Ink fullscreen hub (`/` commands). Prompts use Clack. `gflows viz` prints the scrollback status panel.
 
 ## Exit codes
@@ -51,6 +51,9 @@ gflows doctor --json
 gflows continue
 gflows abort
 gflows undo
+
+# Repo shape / stacks
+gflows info --json
 ```
 
 ## Branch merge targets

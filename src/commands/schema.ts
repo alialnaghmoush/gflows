@@ -60,6 +60,8 @@ export async function run(_args: ParsedArgs): Promise<void> {
       sync: ["--rebase", "--force"],
       list: ["-r/--include-remote", "--json"],
       status: ["--json"],
+      info: ["--json"],
+      doctor: ["--json"],
     },
     agentNotes: [
       "Always pass explicit flags in non-TTY (never assume interactive hub).",
@@ -84,6 +86,7 @@ function commandMeta(command: string): { summary: string; interactiveOk: boolean
     pr: { summary: "Open PR/MR via gh/glab", interactiveOk: true },
     viz: { summary: "Visual branch map and flow diagram", interactiveOk: true },
     doctor: { summary: "Repo health checks", interactiveOk: false },
+    info: { summary: "Repo layout, versions, and stacks", interactiveOk: false },
     config: { summary: "Get/set .gflows.json", interactiveOk: true },
     schema: { summary: "Machine-readable command catalog", interactiveOk: false },
     continue: { summary: "Resume suspended operation", interactiveOk: false },

@@ -260,7 +260,7 @@ describe("integration: completion", () => {
     expect(r.stdout).toContain("# Bash completion");
     expect(r.stdout).toContain("complete -F _gflows");
     expect(r.stdout).toContain("init start finish sync pr");
-    expect(r.stdout).toContain("doctor config schema");
+    expect(r.stdout).toContain("doctor info config schema");
     expect(r.stdout).toContain("complete -F _gflows");
   });
 

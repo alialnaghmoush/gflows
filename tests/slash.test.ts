@@ -28,6 +28,7 @@ describe("filterSlashCommands", () => {
 describe("completeSlashInput", () => {
   test("completes unique match with trailing space", () => {
     expect(completeSlashInput("/doct")).toBe("/doctor ");
+    expect(completeSlashInput("/inf")).toBe("/info ");
   });
 
   test("completes selected match without trailing space when ambiguous", () => {
