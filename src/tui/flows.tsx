@@ -3,17 +3,12 @@
  * @module tui/flows
  */
 
-import { Box, Text, useInput } from "ink";
 import type React from "react";
 import { useEffect, useState } from "react";
 import type { BranchType } from "../types.js";
 import { collectVizSnapshot, type VizSnapshot } from "../viz.js";
+import { type HubPanelLine, HubScrollPanel } from "./panels.js";
 import { InkConfirm, InkSelect, InkText, WizardFrame } from "./prompts.js";
-
-const MUTED = "#8A8A8A";
-const FG = "#E6E6E6";
-const GREEN = "#78C88C";
-const ACCENT = "#E88C4A";
 
 const BRANCH_TYPES: BranchType[] = ["feature", "bugfix", "chore", "release", "hotfix", "spike"];
 
@@ -150,7 +145,7 @@ export function SyncFlow({
  * Styled branch list inside the hub (no drop-out to plain stdout).
  */
 export function ListFlow({ cwd, onDone }: { cwd: string; onDone: () => void }): React.ReactElement {
-  const [lines, setLines] = useState<string[] | null>(null);
+  const [lines, setLines] = useState<HubPanelLine[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -158,7 +153,15 @@ export function ListFlow({ cwd, onDone }: { cwd: string; onDone: () => void }): 
     void (async () => {
       try {
         const snap = await collectVizSnapshot(cwd);
-        if (!cancelled) setLines(formatListLines(snap));
+        if (!cancelled) {
+          setLines(
+            formatListLines(snap).map((text, i) => ({
+              id: `b${i}`,
+              text,
+              tone: text.includes("●") ? ("ok" as const) : ("default" as const),
+            })),
+          );
+        }
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : String(err));
@@ -171,34 +174,7 @@ export function ListFlow({ cwd, onDone }: { cwd: string; onDone: () => void }): 
     };
   }, [cwd]);
 
-  useInput((_ch, key) => {
-    if (key.return || key.escape || (key.ctrl && _ch === "c")) onDone();
-  });
-
-  return (
-    <WizardFrame title="Branches">
-      {lines === null ? (
-        <Text color={MUTED}>Loading…</Text>
-      ) : error ? (
-        <Text color={FG}>{error}</Text>
-      ) : (
-        <Box flexDirection="column">
-          {lines.map((line) => {
-            const current = line.includes("●");
-            return (
-              <Text key={line} color={current ? GREEN : FG} bold={current}>
-                {line}
-              </Text>
-            );
-          })}
-        </Box>
-      )}
-      <Box marginTop={1}>
-        <Text color={MUTED}>enter / esc return to hub</Text>
-        <Text color={ACCENT}> █</Text>
-      </Box>
-    </WizardFrame>
-  );
+  return <HubScrollPanel title="Branches" lines={lines} error={error} onDone={onDone} />;
 }
 
 /**

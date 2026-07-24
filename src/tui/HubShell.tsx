@@ -10,6 +10,7 @@ import { FinishFlow, ListFlow, StartFlow, SyncFlow } from "./flows.js";
 import { HubHome } from "./HubHome.js";
 import { WizardFrame } from "./prompts.js";
 import { SLASH_COMMANDS } from "./slash.js";
+import { ConfigView, DoctorView, HelpView, StatusView, VersionView } from "./views.js";
 
 const ACCENT = "#E88C4A";
 const MUTED = "#8A8A8A";
@@ -24,13 +25,27 @@ type Screen =
   | { id: "finish" }
   | { id: "sync" }
   | { id: "list" }
+  | { id: "doctor" }
+  | { id: "help" }
+  | { id: "status" }
+  | { id: "config" }
+  | { id: "version" }
   | { id: "notice"; message: string };
 
-const DISPATCH_COMMANDS = new Set(
-  SLASH_COMMANDS.map((c) => c.name).filter(
-    (name) => !["start", "finish", "sync", "list", "viz", "quit", "exit", "q"].includes(name),
-  ),
-);
+/** Commands that leave Ink for git / side effects. */
+const DISPATCH_COMMANDS = new Set([
+  "init",
+  "pr",
+  "continue",
+  "switch",
+  "bump",
+  "delete",
+  "undo",
+  "abort",
+  "schema",
+  "mcp",
+  "completion",
+]);
 
 /**
  * Props for the hub shell.
@@ -54,6 +69,43 @@ export function HubShell({ cwd, onDone }: HubShellProps): React.ReactElement {
 
   const cancelWizard = () => setScreen({ id: "home" });
   const runArgv = (argv: string[]) => finish({ kind: "run", argv });
+
+  const openInHub = (cmd: string): boolean => {
+    switch (cmd) {
+      case "start":
+        setScreen({ id: "start" });
+        return true;
+      case "finish":
+        setScreen({ id: "finish" });
+        return true;
+      case "sync":
+        setScreen({ id: "sync" });
+        return true;
+      case "list":
+        setScreen({ id: "list" });
+        return true;
+      case "doctor":
+        setScreen({ id: "doctor" });
+        return true;
+      case "help":
+        setScreen({ id: "help" });
+        return true;
+      case "status":
+        setScreen({ id: "status" });
+        return true;
+      case "config":
+        setScreen({ id: "config" });
+        return true;
+      case "version":
+        setScreen({ id: "version" });
+        return true;
+      case "viz":
+        setScreen({ id: "home", flash: "Branch map is shown on this screen." });
+        return true;
+      default:
+        return false;
+    }
+  };
 
   const handleSlash = (raw: string) => {
     const parts = raw.slice(1).trim().split(/\s+/);
@@ -91,19 +143,25 @@ export function HubShell({ cwd, onDone }: HubShellProps): React.ReactElement {
       setScreen({ id: "sync" });
       return;
     }
-    if (cmd === "list") {
-      setScreen({ id: "list" });
+    if (cmd === "config" && rest.length > 0) {
+      runArgv(["config", ...rest]);
       return;
     }
-    if (cmd === "viz") {
-      setScreen({ id: "home", flash: "Branch map is shown on this screen." });
+
+    if (openInHub(cmd)) return;
+
+    if (!DISPATCH_COMMANDS.has(cmd) && !SLASH_COMMANDS.some((c) => c.name === cmd)) {
+      setScreen({
+        id: "notice",
+        message: `Unknown /${cmd} — type / for command hints.`,
+      });
       return;
     }
 
     if (!DISPATCH_COMMANDS.has(cmd)) {
       setScreen({
         id: "notice",
-        message: `Unknown /${cmd} — type / for command hints.`,
+        message: `/${cmd} is not available from the hub yet.`,
       });
       return;
     }
@@ -116,22 +174,7 @@ export function HubShell({ cwd, onDone }: HubShellProps): React.ReactElement {
       finish({ kind: "quit" });
       return;
     }
-    if (action === "start") {
-      setScreen({ id: "start" });
-      return;
-    }
-    if (action === "finish") {
-      setScreen({ id: "finish" });
-      return;
-    }
-    if (action === "sync") {
-      setScreen({ id: "sync" });
-      return;
-    }
-    if (action === "list") {
-      setScreen({ id: "list" });
-      return;
-    }
+    if (openInHub(action)) return;
     runArgv([action]);
   };
 
@@ -146,6 +189,21 @@ export function HubShell({ cwd, onDone }: HubShellProps): React.ReactElement {
   }
   if (screen.id === "list") {
     return <ListFlow cwd={cwd} onDone={cancelWizard} />;
+  }
+  if (screen.id === "doctor") {
+    return <DoctorView cwd={cwd} onDone={cancelWizard} />;
+  }
+  if (screen.id === "help") {
+    return <HelpView onDone={cancelWizard} />;
+  }
+  if (screen.id === "status") {
+    return <StatusView cwd={cwd} onDone={cancelWizard} />;
+  }
+  if (screen.id === "config") {
+    return <ConfigView cwd={cwd} onDone={cancelWizard} />;
+  }
+  if (screen.id === "version") {
+    return <VersionView onDone={cancelWizard} />;
   }
   if (screen.id === "notice") {
     return (

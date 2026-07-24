@@ -17,34 +17,30 @@ import { hint, success } from "../out.js";
 import { readActiveRun } from "../run-state.js";
 import type { ParsedArgs } from "../types.js";
 
-interface Check {
+/** One doctor health check row. */
+export interface DoctorCheck {
   ok: boolean;
   name: string;
   detail: string;
 }
 
-/**
- * Runs health checks and prints a report (or JSON).
- */
-export async function run(args: ParsedArgs): Promise<void> {
-  let repoRoot: string;
-  try {
-    repoRoot = await resolveRepoRoot(args.cwd);
-  } catch (err) {
-    if (args.json) {
-      console.log(JSON.stringify({ ok: false, error: String(err) }, null, 2));
-      process.exit(2);
-    }
-    throw err;
-  }
+/** Structured doctor report (CLI + hub). */
+export interface DoctorReport {
+  ok: boolean;
+  checks: DoctorCheck[];
+}
 
-  const config = resolveConfig(
-    repoRoot,
-    { main: args.main, dev: args.dev, remote: args.remote },
-    { verbose: args.verbose },
-  );
+/**
+ * Collects repo health checks without printing or exiting.
+ */
+export async function collectDoctorReport(
+  cwd: string,
+  overrides?: { main?: string; dev?: string; remote?: string },
+): Promise<DoctorReport> {
+  const repoRoot = await resolveRepoRoot(cwd);
+  const config = resolveConfig(repoRoot, overrides ?? {}, {});
   const cfgRead = readConfigFile(repoRoot);
-  const checks: Check[] = [];
+  const checks: DoctorCheck[] = [];
 
   checks.push({
     ok: true,
@@ -121,9 +117,37 @@ export async function run(args: ParsedArgs): Promise<void> {
     detail: clean ? "clean" : "dirty (uncommitted changes)",
   });
 
-  const ok = checks.every((c) => c.ok);
+  return { ok: checks.every((c) => c.ok), checks };
+}
+
+/**
+ * Runs health checks and prints a report (or JSON).
+ */
+export async function run(args: ParsedArgs): Promise<void> {
+  let report: DoctorReport;
+  try {
+    report = await collectDoctorReport(args.cwd, {
+      main: args.main,
+      dev: args.dev,
+      remote: args.remote,
+    });
+  } catch (err) {
+    if (args.json) {
+      console.log(JSON.stringify({ ok: false, error: String(err) }, null, 2));
+      process.exit(2);
+    }
+    throw err;
+  }
+
+  const { ok, checks } = report;
 
   if (args.json) {
+    const repoRoot = await resolveRepoRoot(args.cwd);
+    const config = resolveConfig(
+      repoRoot,
+      { main: args.main, dev: args.dev, remote: args.remote },
+      { verbose: args.verbose },
+    );
     console.log(JSON.stringify({ ok, config, checks }, null, 2));
     if (!ok) process.exit(2);
     return;

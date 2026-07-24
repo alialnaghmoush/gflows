@@ -6,10 +6,10 @@
 import type { ParsedArgs } from "../types.js";
 
 /**
- * Runs the help command: prints usage, commands, types, flags, and exit codes to stdout.
+ * Full help text (CLI stdout + hub scroll panel).
  */
-export async function run(_args: ParsedArgs): Promise<void> {
-  const out = `
+export function getHelpText(): string {
+  return `
 gflows — Modern Git branching workflow CLI
 
 Usage: gflows <command> [type] [name] [flags]
@@ -68,6 +68,12 @@ Exit codes: 0 success, 1 usage/validation, 2 Git or system error.
 
 Stuck?  gflows continue | gflows abort | gflows undo | gflows doctor
 Agents: see AGENTS.md, gflows schema, gflows mcp
-`;
-  console.log(out.trim());
+`.trim();
+}
+
+/**
+ * Runs the help command: prints usage, commands, types, flags, and exit codes to stdout.
+ */
+export async function run(_args: ParsedArgs): Promise<void> {
+  console.log(getHelpText());
 }
