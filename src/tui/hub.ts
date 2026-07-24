@@ -6,7 +6,9 @@
 import { render } from "ink";
 import React from "react";
 import { dispatch } from "../dispatch.js";
+import { PromptCancelledError } from "../prompts.js";
 import { type HubSessionResult, HubShell } from "./HubShell.js";
+import { prepareStdinAfterInk } from "./stdin.js";
 
 /**
  * Whether stdin/stdout can host the Ink hub.
@@ -27,11 +29,15 @@ export async function runTuiHub(cwd: string): Promise<boolean> {
     if (result.kind === "quit") break;
 
     if (result.kind === "run") {
+      // Ink unrefs stdin on unmount — re-arm before Clack / git prompts.
+      prepareStdinAfterInk();
       console.log("");
       try {
         await dispatch(cwd, result.argv);
       } catch (err) {
-        console.error("gflows:", err instanceof Error ? err.message : String(err));
+        if (!(err instanceof PromptCancelledError)) {
+          console.error("gflows:", err instanceof Error ? err.message : String(err));
+        }
       }
       console.log("");
       await waitEnterRaw("Press enter to return to hub…");

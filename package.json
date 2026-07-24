@@ -1,6 +1,6 @@
 {
   "name": "gflows",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "author": "Ali AlNaghmoush (https://github.com/alialnaghmoush)",
   "repository": {
     "type": "git",
@@ -39,7 +39,8 @@
     "gflows": "bun run src/cli.ts",
     "publish:all": "bun run scripts/publish.ts",
     "publish:npm": "bun run scripts/publish.ts -- --npm-only",
-    "publish:jsr": "bun run scripts/publish.ts -- --jsr-only"
+    "publish:jsr": "bun run scripts/publish.ts -- --jsr-only",
+    "g": "bun run src/cli.ts"
   },
   "type": "module",
   "dependencies": {

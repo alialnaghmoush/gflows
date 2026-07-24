@@ -9,6 +9,7 @@
 import { EXIT_GIT, EXIT_OK, EXIT_USER } from "./constants.js";
 import { exitCodeForError, printError } from "./errors.js";
 import { parse } from "./parse.js";
+import { PromptCancelledError } from "./prompts.js";
 import type { ParsedArgs } from "./types.js";
 
 /** Last parsed args, set at start of run(); used by catch/rejection to respect -v for stack trace. */
@@ -27,7 +28,10 @@ async function run(): Promise<void> {
       await runHub(process.cwd());
       return;
     }
-    console.error("gflows: missing command. Use 'gflows help' for usage.");
+    console.error(
+      "gflows: no interactive TTY. Run `gflows` directly (or `alias g=gflows`), not via a bun/npm script that swallows stdin.",
+    );
+    console.error("Or pass a command: gflows help");
     process.exit(EXIT_USER);
   }
 
@@ -76,6 +80,10 @@ function main(): void {
     })
     .catch((err: unknown) => {
       if (exitCode !== null) return;
+      if (err instanceof PromptCancelledError) {
+        process.exit(EXIT_OK);
+        return;
+      }
       printError(err);
       const verbose = lastParsedArgs?.verbose ?? !!process.env.GFLOWS_VERBOSE;
       if (verbose && err instanceof Error && err.stack) {

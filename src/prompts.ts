@@ -6,12 +6,26 @@
 import * as clack from "@clack/prompts";
 
 /**
- * Exits the process when the user cancels a prompt (Ctrl+C / Escape).
+ * Thrown when the user cancels a Clack prompt (Ctrl+C / Escape).
+ * Callers (CLI / hub) should treat this as a soft abort — do not kill the hub loop via process.exit.
+ */
+export class PromptCancelledError extends Error {
+  /**
+   * Creates a cancellation error.
+   */
+  constructor() {
+    super("Cancelled.");
+    this.name = "PromptCancelledError";
+  }
+}
+
+/**
+ * Converts Clack cancel symbols into {@link PromptCancelledError}.
  */
 function exitIfCancel<T>(value: T | symbol): asserts value is T {
   if (clack.isCancel(value)) {
     clack.cancel("Cancelled.");
-    process.exit(0);
+    throw new PromptCancelledError();
   }
 }
 

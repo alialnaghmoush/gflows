@@ -6,7 +6,15 @@
 import { Box, Text, useApp, useInput } from "ink";
 import type React from "react";
 import { useState } from "react";
-import { FinishFlow, ListFlow, StartFlow, SyncFlow } from "./flows.js";
+import {
+  BumpFlow,
+  FinishFlow,
+  InitFlow,
+  ListFlow,
+  StartFlow,
+  SwitchFlow,
+  SyncFlow,
+} from "./flows.js";
 import { HubHome } from "./HubHome.js";
 import { WizardFrame } from "./prompts.js";
 import { SLASH_COMMANDS } from "./slash.js";
@@ -25,6 +33,9 @@ type Screen =
   | { id: "finish" }
   | { id: "sync" }
   | { id: "list" }
+  | { id: "switch" }
+  | { id: "init" }
+  | { id: "bump" }
   | { id: "doctor" }
   | { id: "help" }
   | { id: "status" }
@@ -32,13 +43,10 @@ type Screen =
   | { id: "version" }
   | { id: "notice"; message: string };
 
-/** Commands that leave Ink for git / side effects. */
+/** Commands that leave Ink for git / side effects (no interactive Clack). */
 const DISPATCH_COMMANDS = new Set([
-  "init",
   "pr",
   "continue",
-  "switch",
-  "bump",
   "delete",
   "undo",
   "abort",
@@ -83,6 +91,15 @@ export function HubShell({ cwd, onDone }: HubShellProps): React.ReactElement {
         return true;
       case "list":
         setScreen({ id: "list" });
+        return true;
+      case "switch":
+        setScreen({ id: "switch" });
+        return true;
+      case "init":
+        setScreen({ id: "init" });
+        return true;
+      case "bump":
+        setScreen({ id: "bump" });
         return true;
       case "doctor":
         setScreen({ id: "doctor" });
@@ -147,6 +164,18 @@ export function HubShell({ cwd, onDone }: HubShellProps): React.ReactElement {
       runArgv(["config", ...rest]);
       return;
     }
+    if (cmd === "switch" && rest.length > 0) {
+      runArgv(["switch", ...rest]);
+      return;
+    }
+    if (cmd === "bump" && rest.length > 0) {
+      runArgv(["bump", ...rest]);
+      return;
+    }
+    if (cmd === "init" && rest.length > 0) {
+      runArgv(["init", ...rest]);
+      return;
+    }
 
     if (openInHub(cmd)) return;
 
@@ -189,6 +218,15 @@ export function HubShell({ cwd, onDone }: HubShellProps): React.ReactElement {
   }
   if (screen.id === "list") {
     return <ListFlow cwd={cwd} onDone={cancelWizard} />;
+  }
+  if (screen.id === "switch") {
+    return <SwitchFlow cwd={cwd} onCancel={cancelWizard} onDone={runArgv} />;
+  }
+  if (screen.id === "init") {
+    return <InitFlow onCancel={cancelWizard} onDone={runArgv} />;
+  }
+  if (screen.id === "bump") {
+    return <BumpFlow onCancel={cancelWizard} onDone={runArgv} />;
   }
   if (screen.id === "doctor") {
     return <DoctorView cwd={cwd} onDone={cancelWizard} />;

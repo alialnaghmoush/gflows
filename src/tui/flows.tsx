@@ -1,16 +1,23 @@
 /**
- * Multi-step Ink wizards for hub actions (start / finish / sync / list).
+ * Multi-step Ink wizards for hub actions (start / finish / sync / list / switch / …).
  * @module tui/flows
  */
 
+import { Text } from "ink";
 import type React from "react";
 import { useEffect, useState } from "react";
+import { resolveConfig } from "../config.js";
+import { branchList, getCurrentBranch, isClean, resolveRepoRoot } from "../git.js";
 import type { BranchType } from "../types.js";
 import { collectVizSnapshot, type VizSnapshot } from "../viz.js";
 import { type HubPanelLine, HubScrollPanel } from "./panels.js";
 import { InkConfirm, InkSelect, InkText, WizardFrame } from "./prompts.js";
 
+const MUTED = "#8A8A8A";
+
 const BRANCH_TYPES: BranchType[] = ["feature", "bugfix", "chore", "release", "hotfix", "spike"];
+
+type SwitchMode = "move" | "restore" | "clean" | "destroy" | "cancel";
 
 /**
  * Collects argv for `gflows start …` entirely inside Ink.
@@ -136,6 +143,268 @@ export function SyncFlow({
         onSubmit={(rebase) => {
           onDone(["sync", ...(rebase ? ["--rebase"] : []), "--force"]);
         }}
+      />
+    </WizardFrame>
+  );
+}
+
+/**
+ * Switch-branch wizard entirely inside Ink (avoids dead Clack after Ink unmount).
+ */
+export function SwitchFlow({
+  cwd,
+  onDone,
+  onCancel,
+}: {
+  cwd: string;
+  onDone: (argv: string[]) => void;
+  onCancel: () => void;
+}): React.ReactElement {
+  const [step, setStep] = useState<"load" | "pick" | "dirty" | "error">("load");
+  const [choices, setChoices] = useState<{ value: string; label: string }[]>([]);
+  const [target, setTarget] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [initialIndex, setInitialIndex] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const root = await resolveRepoRoot(cwd);
+        const config = resolveConfig(root, {}, {});
+        const allLocal = await branchList(root, { dryRun: false, verbose: false });
+        const workflow = BRANCH_TYPES.map((t) => config.prefixes[t])
+          .filter(Boolean)
+          .flatMap((prefix) => allLocal.filter((b) => b.startsWith(prefix)));
+        const mainAndDev = [config.main, config.dev].filter((b) => allLocal.includes(b));
+        const names = [...mainAndDev, ...[...new Set(workflow)].sort()];
+        const current = await getCurrentBranch(root, {});
+        if (cancelled) return;
+        if (names.length === 0) {
+          setError("No branches found.");
+          setStep("error");
+          return;
+        }
+        const opts = names.map((b) => ({
+          value: b,
+          label: current && b === current ? `${b} (current)` : b,
+        }));
+        setChoices(opts);
+        setInitialIndex(Math.max(0, names.indexOf(current)));
+        setStep("pick");
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : String(err));
+          setStep("error");
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [cwd]);
+
+  if (step === "load") {
+    return (
+      <WizardFrame title="Switch branch">
+        <Text color={MUTED}>Loading…</Text>
+      </WizardFrame>
+    );
+  }
+
+  if (step === "error") {
+    return (
+      <HubScrollPanel
+        title="Switch branch"
+        lines={[{ id: "e", text: error ?? "Unknown error", tone: "bad" }]}
+        onDone={onCancel}
+      />
+    );
+  }
+
+  if (step === "pick") {
+    return (
+      <WizardFrame title="Switch branch">
+        <InkSelect
+          message="Switch to branch"
+          options={choices}
+          initialIndex={initialIndex}
+          onCancel={onCancel}
+          onSubmit={(branch) => {
+            void (async () => {
+              setTarget(branch);
+              try {
+                const root = await resolveRepoRoot(cwd);
+                const clean = await isClean(root, {});
+                if (clean) {
+                  onDone(["switch", branch]);
+                  return;
+                }
+                setStep("dirty");
+              } catch (err) {
+                setError(err instanceof Error ? err.message : String(err));
+                setStep("error");
+              }
+            })();
+          }}
+        />
+      </WizardFrame>
+    );
+  }
+
+  // dirty
+  return (
+    <WizardFrame title={`Switch · ${target}`}>
+      <InkSelect<SwitchMode>
+        message="Working tree has uncommitted changes"
+        options={[
+          { value: "move", label: "Move", hint: "carry changes to target" },
+          { value: "restore", label: "Restore", hint: "stash here, restore target" },
+          { value: "clean", label: "Clean", hint: "discard changes" },
+          { value: "destroy", label: "Destroy", hint: "delete current branch" },
+          { value: "cancel", label: "Cancel", hint: "abort switch" },
+        ]}
+        onCancel={onCancel}
+        onSubmit={(mode) => {
+          if (mode === "cancel") {
+            onCancel();
+            return;
+          }
+          onDone(["switch", target, `--${mode}`]);
+        }}
+      />
+    </WizardFrame>
+  );
+}
+
+/**
+ * Init wizard inside Ink; dispatches with -y so CLI skips Clack prompts.
+ */
+export function InitFlow({
+  onDone,
+  onCancel,
+}: {
+  onDone: (argv: string[]) => void;
+  onCancel: () => void;
+}): React.ReactElement {
+  const [step, setStep] = useState<"main" | "dev" | "remote" | "alias">("main");
+  const [main, setMain] = useState("main");
+  const [dev, setDev] = useState("dev");
+  const [remote, setRemote] = useState("origin");
+
+  if (step === "main") {
+    return (
+      <WizardFrame title="Initialize repo">
+        <InkText
+          message="Main branch name"
+          placeholder="main"
+          initialValue="main"
+          onCancel={onCancel}
+          onSubmit={(v) => {
+            setMain(v || "main");
+            setStep("dev");
+          }}
+        />
+      </WizardFrame>
+    );
+  }
+  if (step === "dev") {
+    return (
+      <WizardFrame title="Initialize repo">
+        <InkText
+          message="Dev branch name"
+          placeholder="dev"
+          initialValue="dev"
+          onCancel={onCancel}
+          onSubmit={(v) => {
+            setDev(v || "dev");
+            setStep("remote");
+          }}
+        />
+      </WizardFrame>
+    );
+  }
+  if (step === "remote") {
+    return (
+      <WizardFrame title="Initialize repo">
+        <InkText
+          message="Remote name"
+          placeholder="origin"
+          initialValue="origin"
+          onCancel={onCancel}
+          onSubmit={(v) => {
+            setRemote(v || "origin");
+            setStep("alias");
+          }}
+        />
+      </WizardFrame>
+    );
+  }
+
+  return (
+    <WizardFrame title="Initialize repo">
+      <InkSelect
+        message="Add package.json script alias?"
+        options={[
+          { value: "g", label: 'script "g"', hint: "prefer: alias g=gflows in shell" },
+          { value: "gflows", label: 'script "gflows"' },
+          { value: "skip", label: "Skip", hint: "shell alias is best for hub TTY" },
+        ]}
+        onCancel={onCancel}
+        onSubmit={(alias) => {
+          const argv = ["init", "-y", "-P", "--main", main, "--dev", dev, "--remote", remote];
+          if (alias === "skip") argv.push("--no-script-alias");
+          else argv.push("--script-alias", alias);
+          onDone(argv);
+        }}
+      />
+    </WizardFrame>
+  );
+}
+
+/**
+ * Bump wizard inside Ink.
+ */
+export function BumpFlow({
+  onDone,
+  onCancel,
+}: {
+  onDone: (argv: string[]) => void;
+  onCancel: () => void;
+}): React.ReactElement {
+  const [step, setStep] = useState<"dir" | "type">("dir");
+  const [direction, setDirection] = useState<"up" | "down">("up");
+
+  if (step === "dir") {
+    return (
+      <WizardFrame title="Bump version">
+        <InkSelect<"up" | "down">
+          message="Direction"
+          options={[
+            { value: "up", label: "Up (bump)" },
+            { value: "down", label: "Down (rollback)" },
+          ]}
+          onCancel={onCancel}
+          onSubmit={(d) => {
+            setDirection(d);
+            setStep("type");
+          }}
+        />
+      </WizardFrame>
+    );
+  }
+
+  return (
+    <WizardFrame title={`Bump · ${direction}`}>
+      <InkSelect<"patch" | "minor" | "major">
+        message="Semver part"
+        options={[
+          { value: "patch", label: "patch" },
+          { value: "minor", label: "minor" },
+          { value: "major", label: "major" },
+        ]}
+        onCancel={onCancel}
+        onSubmit={(type) => onDone(["bump", direction, type])}
       />
     </WizardFrame>
   );
