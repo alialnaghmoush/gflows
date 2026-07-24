@@ -190,7 +190,7 @@ export function SwitchFlow({
           label: current && b === current ? `${b} (current)` : b,
         }));
         setChoices(opts);
-        setInitialIndex(Math.max(0, names.indexOf(current)));
+        setInitialIndex(Math.max(0, current ? names.indexOf(current) : 0));
         setStep("pick");
       } catch (err) {
         if (!cancelled) {
