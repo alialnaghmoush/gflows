@@ -11,6 +11,7 @@ import { getCurrentBranch, resolveRepoRoot } from "../git.js";
 import { type RecommendAction, recommend } from "../recommend.js";
 import { getVersion } from "../version.js";
 import { collectVizSnapshot, type VizSnapshot } from "../viz.js";
+import { completeSlashInput, filterSlashCommands } from "./slash.js";
 
 const ACCENT = "#E88C4A";
 const MUTED = "#8A8A8A";
@@ -50,9 +51,12 @@ export function HubHome({
   const [repoPath, setRepoPath] = useState(cwd);
   const [selected, setSelected] = useState(0);
   const [input, setInput] = useState("");
+  const [slashIndex, setSlashIndex] = useState(0);
   const [showHelp, setShowHelp] = useState(false);
   const [loading, setLoading] = useState(true);
   const version = useMemo(() => getVersion(), []);
+  const slashMatches = useMemo(() => filterSlashCommands(input), [input]);
+  const slashMode = input.startsWith("/");
 
   useEffect(() => {
     let cancelled = false;
@@ -87,6 +91,17 @@ export function HubHome({
     if (selected >= actions.length) setSelected(Math.max(0, actions.length - 1));
   }, [actions.length, selected]);
 
+  useEffect(() => {
+    if (slashIndex >= slashMatches.length) {
+      setSlashIndex(Math.max(0, slashMatches.length - 1));
+    }
+  }, [slashMatches.length, slashIndex]);
+
+  const setSlashInput = (next: string) => {
+    setInput(next);
+    setSlashIndex(0);
+  };
+
   useInput((ch, key) => {
     if (key.ctrl && ch === "c") {
       onQuit();
@@ -94,7 +109,7 @@ export function HubHome({
     }
     if (key.escape) {
       if (input || showHelp) {
-        setInput("");
+        setSlashInput("");
         setShowHelp(false);
         return;
       }
@@ -109,23 +124,41 @@ export function HubHome({
       onQuit();
       return;
     }
+    if (key.tab && slashMode) {
+      const next = completeSlashInput(input, slashIndex);
+      if (next !== null) setSlashInput(next);
+      return;
+    }
     if (key.upArrow) {
+      if (slashMode && slashMatches.length > 0) {
+        setSlashIndex((i) => Math.max(0, i - 1));
+        return;
+      }
       setSelected((i) => Math.max(0, i - 1));
       return;
     }
     if (key.downArrow) {
+      if (slashMode && slashMatches.length > 0) {
+        setSlashIndex((i) => Math.min(slashMatches.length - 1, i + 1));
+        return;
+      }
       setSelected((i) => Math.min(actions.length - 1, i + 1));
       return;
     }
     if (key.backspace || key.delete) {
-      setInput((s) => [...s].slice(0, -1).join(""));
+      setSlashInput([...input].slice(0, -1).join(""));
       return;
     }
     if (key.return) {
       const cmd = input.trim();
       if (cmd.startsWith("/")) {
-        setInput("");
-        onSlash(cmd);
+        const match = slashMatches[slashIndex];
+        const body = cmd.slice(1);
+        const token = (body.split(/\s+/)[0] ?? "").toLowerCase();
+        const hasArgs = body.includes(" ");
+        const resolved = match && !hasArgs && token !== match.name ? `/${match.name}` : cmd;
+        setSlashInput("");
+        onSlash(resolved);
         return;
       }
       const action = actions[selected];
@@ -137,7 +170,7 @@ export function HubHome({
       return;
     }
     if (ch && !key.ctrl && !key.meta && ch >= " ") {
-      setInput((s) => s + ch);
+      setSlashInput(input + ch);
     }
   });
 
@@ -237,14 +270,29 @@ export function HubHome({
         <Box marginTop={1} flexDirection="column">
           <Text>
             <Text color={ACCENT}>❯ </Text>
-            {input || <Text color={MUTED}>type /start /finish /sync …</Text>}
+            {input || <Text color={MUTED}>type / for commands…</Text>}
             {input ? <Text color={ACCENT}>█</Text> : null}
           </Text>
-          <Text color={MUTED}>
-            {showHelp
-              ? "/init /start /sync /pr /finish /doctor /help  ·  esc clear  ·  ctrl+c quit"
-              : "? for shortcuts"}
-          </Text>
+          {slashMode && slashMatches.length > 0 ? (
+            <Box flexDirection="column" marginTop={0}>
+              {slashMatches.slice(0, 8).map((item, i) => {
+                const active = i === slashIndex;
+                return (
+                  <Text key={item.name} color={active ? FG : MUTED} bold={active}>
+                    {active ? <Text color={ACCENT}>› </Text> : "  "}/{item.name}
+                    <Text color={MUTED}>{`  ${item.hint}`}</Text>
+                  </Text>
+                );
+              })}
+              <Text color={MUTED}>↑↓ · tab complete · enter run · esc clear</Text>
+            </Box>
+          ) : (
+            <Text color={MUTED}>
+              {showHelp
+                ? "/init /start /sync /pr /finish /doctor /help  ·  esc clear  ·  ctrl+c quit"
+                : "? for shortcuts · / for command menu"}
+            </Text>
+          )}
         </Box>
       </Box>
 

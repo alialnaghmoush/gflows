@@ -5,6 +5,7 @@
 
 import { EXIT_OK } from "../constants.js";
 import type { ParsedArgs } from "../types.js";
+import { getVersion } from "../version.js";
 
 interface JsonRpcRequest {
   jsonrpc?: string;
@@ -197,7 +198,7 @@ export async function run(_args: ParsedArgs): Promise<void> {
         respond(req.id, {
           protocolVersion: "2024-11-05",
           capabilities: { tools: {} },
-          serverInfo: { name: "gflows", version: "1.0.0" },
+          serverInfo: { name: "gflows", version: getVersion() },
         });
         continue;
       }

@@ -5,6 +5,7 @@
 
 import type { ParsedArgs } from "../types.js";
 import { ALL_COMMANDS, BRANCH_TYPE_SHORTS } from "../types.js";
+import { getVersion } from "../version.js";
 
 /**
  * Emits JSON schema for agents and tooling.
@@ -12,7 +13,7 @@ import { ALL_COMMANDS, BRANCH_TYPE_SHORTS } from "../types.js";
 export async function run(_args: ParsedArgs): Promise<void> {
   const schema = {
     name: "gflows",
-    version: "1.0.0",
+    version: getVersion(),
     description: "Git branching workflow CLI (main + dev + typed short-lived branches)",
     exitCodes: {
       "0": "success",

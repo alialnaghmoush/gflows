@@ -7,14 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-07-25
+
 ### Added
 
 - Fullscreen **Ink** TUI hub (`gflows` on TTY): bordered frame, tips / what’s next, actions, `❯` slash prompt, status bar
 - Slash commands: `/init` `/start` `/sync` `/pr` `/finish` `/doctor` `/help` …
+- In-hub `/` autocomplete (↑↓ select, Tab complete, Enter run)
 - Interactive prompts via **@clack/prompts** (Inquirer removed)
 - Legacy Clack menu fallback when TUI cannot run; `gflows viz` for scrollback panel
 - `gflows init`: optional `package.json` script alias (`--script-alias g`, TTY prompt); docs recommend shell `alias g=gflows` for shortest DX
-- Hub wizards (`/start`, `/finish`, `/sync`) run **inside Ink** (fewer Clack drop-outs); only git dispatch leaves the TUI
+- Hub wizards (`/start`, `/finish`, `/sync`, `/list`) run **inside Ink** (fewer drop-outs); only git dispatch leaves the TUI
+
+### Fixed
+
+- Hub no longer exits after dispatch (`stdin.ref` after Ink unmount; alternate screen)
+- `/list` renders a styled in-hub branch view instead of plain stdout under a tall gap
 
 ## [1.0.0] - 2026-07-24
 

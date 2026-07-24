@@ -6,9 +6,10 @@
 import { Box, Text, useApp, useInput } from "ink";
 import type React from "react";
 import { useState } from "react";
-import { FinishFlow, StartFlow, SyncFlow } from "./flows.js";
+import { FinishFlow, ListFlow, StartFlow, SyncFlow } from "./flows.js";
 import { HubHome } from "./HubHome.js";
 import { WizardFrame } from "./prompts.js";
+import { SLASH_COMMANDS } from "./slash.js";
 
 const ACCENT = "#E88C4A";
 const MUTED = "#8A8A8A";
@@ -22,7 +23,14 @@ type Screen =
   | { id: "start" }
   | { id: "finish" }
   | { id: "sync" }
+  | { id: "list" }
   | { id: "notice"; message: string };
+
+const DISPATCH_COMMANDS = new Set(
+  SLASH_COMMANDS.map((c) => c.name).filter(
+    (name) => !["start", "finish", "sync", "list", "viz", "quit", "exit", "q"].includes(name),
+  ),
+);
 
 /**
  * Props for the hub shell.
@@ -83,27 +91,19 @@ export function HubShell({ cwd, onDone }: HubShellProps): React.ReactElement {
       setScreen({ id: "sync" });
       return;
     }
+    if (cmd === "list") {
+      setScreen({ id: "list" });
+      return;
+    }
     if (cmd === "viz") {
       setScreen({ id: "home", flash: "Branch map is shown on this screen." });
       return;
     }
 
-    const known = new Set([
-      "init",
-      "pr",
-      "continue",
-      "switch",
-      "list",
-      "doctor",
-      "help",
-      "config",
-      "bump",
-      "status",
-    ]);
-    if (!known.has(cmd)) {
+    if (!DISPATCH_COMMANDS.has(cmd)) {
       setScreen({
         id: "notice",
-        message: `Unknown /${cmd} — press ? on the home screen for shortcuts.`,
+        message: `Unknown /${cmd} — type / for command hints.`,
       });
       return;
     }
@@ -128,6 +128,10 @@ export function HubShell({ cwd, onDone }: HubShellProps): React.ReactElement {
       setScreen({ id: "sync" });
       return;
     }
+    if (action === "list") {
+      setScreen({ id: "list" });
+      return;
+    }
     runArgv([action]);
   };
 
@@ -139,6 +143,9 @@ export function HubShell({ cwd, onDone }: HubShellProps): React.ReactElement {
   }
   if (screen.id === "sync") {
     return <SyncFlow onCancel={cancelWizard} onDone={runArgv} />;
+  }
+  if (screen.id === "list") {
+    return <ListFlow cwd={cwd} onDone={cancelWizard} />;
   }
   if (screen.id === "notice") {
     return (

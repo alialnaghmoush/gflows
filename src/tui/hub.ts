@@ -57,6 +57,12 @@ function runHubSession(cwd: string): Promise<HubSessionResult> {
           instance.unmount();
         },
       }),
+      {
+        // Keep hub off the primary scrollback so command output isn't stranded
+        // under a full-height cleared frame when we drop out for dispatch.
+        alternateScreen: true,
+        exitOnCtrlC: false,
+      },
     );
     void instance.waitUntilExit().then(() => {
       done({ kind: "quit" });
@@ -66,24 +72,43 @@ function runHubSession(cwd: string): Promise<HubSessionResult> {
 
 /**
  * Raw stdin “press enter” (no Clack / no Ink).
+ * Ink unrefs stdin on unmount — we must ref it again or the process exits
+ * before the user can return to the hub.
  */
 function waitEnterRaw(label: string): Promise<void> {
   return new Promise((resolve) => {
+    const stdin = process.stdin;
     process.stdout.write(`${label}\n`);
-    if (typeof process.stdin.setRawMode === "function") {
-      process.stdin.setRawMode(true);
+    if (typeof stdin.setRawMode === "function") {
+      stdin.setRawMode(true);
     }
-    process.stdin.resume();
+    stdin.resume();
+    stdin.ref();
+
+    // Drop buffered Enter from the hub key that launched this command.
+    if (typeof stdin.read === "function") {
+      for (;;) {
+        const pending = stdin.read();
+        if (pending === null) break;
+      }
+    }
+
+    const cleanup = () => {
+      stdin.off("data", onData);
+      if (typeof stdin.setRawMode === "function") {
+        stdin.setRawMode(false);
+      }
+      stdin.pause();
+      stdin.unref();
+    };
+
     const onData = (chunk: string | Buffer) => {
       const s = typeof chunk === "string" ? chunk : chunk.toString("utf8");
-      if (s === "\r" || s === "\n" || s === "\x03") {
-        process.stdin.off("data", onData);
-        if (typeof process.stdin.setRawMode === "function") {
-          process.stdin.setRawMode(false);
-        }
+      if (s.includes("\r") || s.includes("\n") || s.includes("\x03")) {
+        cleanup();
         resolve();
       }
     };
-    process.stdin.on("data", onData);
+    stdin.on("data", onData);
   });
 }

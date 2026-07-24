@@ -1,12 +1,19 @@
 /**
- * Multi-step Ink wizards for hub actions (start / finish / sync).
+ * Multi-step Ink wizards for hub actions (start / finish / sync / list).
  * @module tui/flows
  */
 
+import { Box, Text, useInput } from "ink";
 import type React from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { BranchType } from "../types.js";
+import { collectVizSnapshot, type VizSnapshot } from "../viz.js";
 import { InkConfirm, InkSelect, InkText, WizardFrame } from "./prompts.js";
+
+const MUTED = "#8A8A8A";
+const FG = "#E6E6E6";
+const GREEN = "#78C88C";
+const ACCENT = "#E88C4A";
 
 const BRANCH_TYPES: BranchType[] = ["feature", "bugfix", "chore", "release", "hotfix", "spike"];
 
@@ -137,4 +144,86 @@ export function SyncFlow({
       />
     </WizardFrame>
   );
+}
+
+/**
+ * Styled branch list inside the hub (no drop-out to plain stdout).
+ */
+export function ListFlow({ cwd, onDone }: { cwd: string; onDone: () => void }): React.ReactElement {
+  const [lines, setLines] = useState<string[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const snap = await collectVizSnapshot(cwd);
+        if (!cancelled) setLines(formatListLines(snap));
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : String(err));
+          setLines([]);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [cwd]);
+
+  useInput((_ch, key) => {
+    if (key.return || key.escape || (key.ctrl && _ch === "c")) onDone();
+  });
+
+  return (
+    <WizardFrame title="Branches">
+      {lines === null ? (
+        <Text color={MUTED}>Loading…</Text>
+      ) : error ? (
+        <Text color={FG}>{error}</Text>
+      ) : (
+        <Box flexDirection="column">
+          {lines.map((line) => {
+            const current = line.includes("●");
+            return (
+              <Text key={line} color={current ? GREEN : FG} bold={current}>
+                {line}
+              </Text>
+            );
+          })}
+        </Box>
+      )}
+      <Box marginTop={1}>
+        <Text color={MUTED}>enter / esc return to hub</Text>
+        <Text color={ACCENT}> █</Text>
+      </Box>
+    </WizardFrame>
+  );
+}
+
+/**
+ * Formats a viz snapshot into hub list rows.
+ */
+function formatListLines(snap: VizSnapshot): string[] {
+  const lines: string[] = [];
+  if (snap.suspended) lines.push(`⚠ suspended: ${snap.suspended}`);
+  for (const row of snap.rows) {
+    if (row.type !== "main" && row.type !== "dev") continue;
+    const mark = row.current ? "●" : "○";
+    lines.push(`${mark} ${row.name}  [${row.type}]`);
+  }
+  const workflow = snap.rows.filter((r) => r.type !== "main" && r.type !== "dev");
+  if (workflow.length === 0) {
+    lines.push("  (no workflow branches)");
+  } else {
+    for (let i = 0; i < workflow.length; i++) {
+      const row = workflow[i];
+      if (!row) continue;
+      const elbow = i === workflow.length - 1 ? "└─" : "├─";
+      const mark = row.current ? "●" : "○";
+      const ab = row.ahead === 0 && row.behind === 0 ? "synced" : `+${row.ahead}/-${row.behind}`;
+      lines.push(`${elbow} ${mark} ${row.name}  (${row.type}) ${ab}`);
+    }
+  }
+  return lines;
 }
