@@ -7,6 +7,7 @@ import { render } from "ink";
 import React from "react";
 import { dispatch } from "../dispatch.js";
 import { PromptCancelledError } from "../prompts.js";
+import { runWithSoftExit, SoftExitError } from "../soft-exit.js";
 import { type HubSessionResult, HubShell } from "./HubShell.js";
 import { prepareStdinAfterInk } from "./stdin.js";
 
@@ -25,17 +26,22 @@ export async function runTuiHub(cwd: string): Promise<boolean> {
   if (!canUseTui()) return false;
 
   for (;;) {
+    // Ink needs a live, referenced stdin after waitEnter / Clack / prior unmount.
+    prepareStdinAfterInk();
     const result = await runHubSession(cwd);
     if (result.kind === "quit") break;
 
     if (result.kind === "run") {
-      // Ink unrefs stdin on unmount — re-arm before Clack / git prompts.
       prepareStdinAfterInk();
       console.log("");
       try {
-        await dispatch(cwd, result.argv);
+        // Many commands call process.exit on validation/success paths — trap them
+        // so the hub can show “press enter” and remount instead of dying.
+        await runWithSoftExit(() => dispatch(cwd, result.argv));
       } catch (err) {
-        if (!(err instanceof PromptCancelledError)) {
+        if (err instanceof SoftExitError) {
+          // Command already printed its output / error; continue to waitEnter.
+        } else if (!(err instanceof PromptCancelledError)) {
           console.error("gflows:", err instanceof Error ? err.message : String(err));
         }
       }
@@ -78,15 +84,18 @@ function runHubSession(cwd: string): Promise<HubSessionResult> {
 
 /**
  * Raw stdin “press enter” (no Clack / no Ink).
- * Ink unrefs stdin on unmount — we must ref it again or the process exits
- * before the user can return to the hub.
+ * Leaves stdin armed for the next Ink remount (does not pause/unref).
  */
 function waitEnterRaw(label: string): Promise<void> {
   return new Promise((resolve) => {
     const stdin = process.stdin;
     process.stdout.write(`${label}\n`);
     if (typeof stdin.setRawMode === "function") {
-      stdin.setRawMode(true);
+      try {
+        stdin.setRawMode(true);
+      } catch {
+        // ignore
+      }
     }
     stdin.resume();
     stdin.ref();
@@ -99,20 +108,17 @@ function waitEnterRaw(label: string): Promise<void> {
       }
     }
 
-    const cleanup = () => {
+    const finish = () => {
       stdin.off("data", onData);
-      if (typeof stdin.setRawMode === "function") {
-        stdin.setRawMode(false);
-      }
-      stdin.pause();
-      stdin.unref();
+      // Critical: leave stdin ready for Ink remount (old code paused+unref'd → hub died).
+      prepareStdinAfterInk();
+      resolve();
     };
 
     const onData = (chunk: string | Buffer) => {
       const s = typeof chunk === "string" ? chunk : chunk.toString("utf8");
       if (s.includes("\r") || s.includes("\n") || s.includes("\x03")) {
-        cleanup();
-        resolve();
+        finish();
       }
     };
     stdin.on("data", onData);
