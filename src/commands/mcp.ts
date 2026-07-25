@@ -94,6 +94,24 @@ const TOOLS = [
     },
   },
   {
+    name: "gflows_release",
+    description:
+      "Quick release from dev: bump package version, merge into main, tag, sync main→dev. Requires bumpType.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        path: { type: "string" },
+        bumpType: {
+          type: "string",
+          description: "Semver segment to bump: patch, minor, or major",
+        },
+        push: { type: "boolean" },
+        preview: { type: "boolean" },
+      },
+      required: ["bumpType"],
+    },
+  },
+  {
     name: "gflows_schema",
     description: "Return the gflows command schema JSON.",
     inputSchema: { type: "object", properties: {} },
@@ -159,6 +177,14 @@ async function runTool(
       if (args.push) argv.push("-p");
       else argv.push("-P");
       break;
+    case "gflows_release": {
+      const bumpType = String(args.bumpType ?? "patch");
+      argv.push("release", "up", bumpType);
+      if (args.preview) argv.push("--preview");
+      if (args.push) argv.push("-p");
+      else argv.push("-P");
+      break;
+    }
     case "gflows_schema":
       argv.push("schema");
       break;
@@ -185,7 +211,7 @@ async function runTool(
  */
 export async function run(_args: ParsedArgs): Promise<void> {
   console.error(
-    "gflows mcp: listening on stdio (JSON-RPC). Tools: status, doctor, info, list, start, sync, finish, schema.",
+    "gflows mcp: listening on stdio (JSON-RPC). Tools: status, doctor, info, list, start, sync, finish, release, schema.",
   );
 
   const decoder = new TextDecoder();

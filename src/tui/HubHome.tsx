@@ -289,7 +289,7 @@ export function HubHome({
           ) : (
             <Text color={MUTED}>
               {showHelp
-                ? "/init /start /sync /pr /finish /doctor /info /help  ·  esc clear  ·  ctrl+c quit"
+                ? "/init /start /sync /pr /finish /release /doctor /info /help  ·  esc clear  ·  ctrl+c quit"
                 : "? for shortcuts · / for command menu"}
             </Text>
           )}
@@ -372,6 +372,7 @@ function buildActions(snap: VizSnapshot | null, recommended: RecommendAction | n
   push("sync", "Sync with base", "/sync");
   push("pr", "Open pull request", "/pr");
   push("finish", "Finish / merge branch", "/finish");
+  if (snap?.current === snap?.dev) push("release", "Quick release to main", "/release");
   if (snap?.suspended) push("continue", "Continue suspended", "/continue");
   push("switch", "Switch branch", "/switch");
   push("list", "List branches", "/list");

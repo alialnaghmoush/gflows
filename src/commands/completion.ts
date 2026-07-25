@@ -12,6 +12,7 @@ const COMMANDS = [
   "init",
   "start",
   "finish",
+  "release",
   "sync",
   "pr",
   "viz",
@@ -132,6 +133,15 @@ _gflows() {
         COMPREPLY=()
       fi
       ;;
+    release)
+      if (( cword == cmd_idx + 1 )); then
+        COMPREPLY=($(compgen -W "up" -- "$cur"))
+      elif (( cword == cmd_idx + 2 )); then
+        COMPREPLY=($(compgen -W "${BUMP_TYPES.join(" ")}" -- "$cur"))
+      else
+        COMPREPLY=()
+      fi
+      ;;
     *)
       COMPREPLY=()
       ;;
@@ -212,6 +222,13 @@ _gflows() {
             _values "direction" ${BUMP_DIRECTIONS.map((d) => `"${d}"`).join(" ")}
           fi
           ;;
+        release)
+          if [[ "${D}words[CURRENT-1]}" == "up" ]]; then
+            _values "bump-type" ${BUMP_TYPES.map((t) => `"${t}"`).join(" ")}
+          else
+            _values "direction" "up"
+          fi
+          ;;
       esac
       ;;
   esac
@@ -253,6 +270,8 @@ complete -c gflows -f -n "not __fish_seen_subcommand_from ${COMMANDS.join(" ")}"
   -a "start" -d "Create workflow branch"
 complete -c gflows -f -n "not __fish_seen_subcommand_from ${COMMANDS.join(" ")}" \\
   -a "finish" -d "Merge and close branch"
+complete -c gflows -f -n "not __fish_seen_subcommand_from ${COMMANDS.join(" ")}" \\
+  -a "release" -d "Quick release from dev"
 complete -c gflows -f -n "not __fish_seen_subcommand_from ${COMMANDS.join(" ")}" \\
   -a "switch" -d "Switch branch"
 complete -c gflows -f -n "not __fish_seen_subcommand_from ${COMMANDS.join(" ")}" \\
@@ -313,6 +332,12 @@ complete -c gflows -f -n "__fish_seen_subcommand_from delete" \\
 complete -c gflows -f -n "__fish_seen_subcommand_from bump; and not __fish_seen_subcommand_from ${BUMP_DIRECTIONS.join(" ")}" \\
   -a "up down"
 complete -c gflows -f -n "__fish_seen_subcommand_from bump; and __fish_seen_subcommand_from up down" \\
+  -a "patch minor major"
+
+# release up [patch|minor|major]
+complete -c gflows -f -n "__fish_seen_subcommand_from release; and not __fish_seen_subcommand_from up" \\
+  -a "up"
+complete -c gflows -f -n "__fish_seen_subcommand_from release; and __fish_seen_subcommand_from up" \\
   -a "patch minor major"
 
 # Common flags

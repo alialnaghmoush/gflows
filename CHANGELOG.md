@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-07-25
+
+### Added
+
+- `gflows release` — quick release from `dev`: bump package version, merge into `main`, tag, sync `main` → `dev` (`up patch|minor|major`, `-y`, `-p`/`-P`)
+- Hub `/release` wizard and MCP tool `gflows_release`
+
+### Fixed
+
+- `gflows bump` (and finish `--bump`) update `package.json` version in place so tab/space formatting is preserved (Biome-friendly)
+
 ## [1.1.1] - 2026-07-25
 
 ### Fixed

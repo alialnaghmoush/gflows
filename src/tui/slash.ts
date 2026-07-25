@@ -20,6 +20,7 @@ export const SLASH_COMMANDS: readonly SlashCommand[] = [
   { name: "sync", hint: "Sync with base (wizard)" },
   { name: "pr", hint: "Open pull request" },
   { name: "finish", hint: "Finish / merge (wizard)" },
+  { name: "release", hint: "Quick release from dev" },
   { name: "continue", hint: "Continue suspended run" },
   { name: "switch", hint: "Switch branch" },
   { name: "list", hint: "List branches" },

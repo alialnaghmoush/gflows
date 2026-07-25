@@ -49,7 +49,7 @@ Then:
 g          # or: gflows
 ```
 
-You get a fullscreen menu: what’s next, branch map, actions. **Select** an item (or type `/start`, `/finish`, `/sync`, …). Follow-up questions (type, name, push, rebase) stay **inside the Ink UI** — no drop-out to a separate prompt tool. Only the git command itself runs on the main screen, then you press enter to return.
+You get a fullscreen menu: what’s next, branch map, actions. **Select** an item (or type `/start`, `/finish`, `/release`, `/sync`, …). Follow-up questions (type, name, push, rebase) stay **inside the Ink UI** — no drop-out to a separate prompt tool. Only the git command itself runs on the main screen, then you press enter to return.
 
 ```
 ❯ ★ Start new work
@@ -130,6 +130,7 @@ main  ←  release / hotfix only          (production)
 | **dev**                              | Integration (created by `init` from main)                   |
 | **feature / bugfix / chore / spike** | Day-to-day work → merge to **dev**                          |
 | **release / hotfix**                 | Versioned (`vX.Y.Z`) → **main**, then **main → dev**, + tag |
+| **quick release** (`gflows release`) | From **dev** only: bump → **main** → tag → sync **dev**     |
 
 
 **Lifecycle:** `init` → `start` → commit → (`sync`) → (`pr`) → `finish`
@@ -216,6 +217,12 @@ Hub: `g` → select the action. Typed short form assumes `alias g=gflows`.
 | `gflows start release v1.4.0` | `g -S -r v1.4.0` |
 | `gflows finish release -y -p` | `g -F -r -y -p` |
 
+**Quick release from `dev`** — bump, merge **main**, tag, sync **main → dev** (no `release/*` branch)
+
+| Long | Short |
+|------|-------|
+| `gflows release up patch -y -p` | — |
+
 **Hotfix**
 
 | Long | Short |
@@ -247,7 +254,7 @@ Bare `gflows` / `g` in a **TTY** opens the Ink hub (see [Way 1](#way-1--hub-reco
 | Input                                      | Action                                 |
 | ------------------------------------------ | -------------------------------------- |
 | ↑↓ Enter                                   | Select an action — Ink wizard if needed |
-| `/start` `/finish` `/sync` …               | Slash command; wizards stay in the hub |
+| `/start` `/finish` `/release` `/sync` …    | Slash command; wizards stay in the hub |
 | `?`                                        | Shortcut help                          |
 | `q` / Esc / Ctrl+C                         | Quit                                   |
 
@@ -267,6 +274,7 @@ Bare `gflows` / `g` in a **TTY** opens the Ink hub (see [Way 1](#way-1--hub-reco
 | `init` `-I`                   | Ensure main; create dev                     |
 | `start` `-S`                  | Create typed branch                         |
 | `finish` `-F`                 | Merge + close (plan; delete default **on**) |
+| `release`                     | Quick release from `dev` (bump + main + tag)|
 | `sync`                        | Update branch from its base                 |
 | `pr`                          | Open PR/MR (`gh` / `glab`)                  |
 | `switch` `-W`                 | Switch branch                               |

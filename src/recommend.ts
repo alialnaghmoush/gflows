@@ -11,6 +11,7 @@ export type RecommendAction =
   | "continue"
   | "sync"
   | "finish"
+  | "release"
   | "pr"
   | "start"
   | "commit"
@@ -79,7 +80,7 @@ export function recommend(snap: VizSnapshot): Recommendation {
     return {
       action: "start",
       label: "Start a feature (or chore / bugfix)",
-      detail: "Integration line — short-lived branches start here",
+      detail: "Integration line — short-lived branches start here; /release for quick ship to main",
       menuLabel: "Start new work",
     };
   }

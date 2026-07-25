@@ -12,7 +12,8 @@
 
 - `gflows` (TTY): Ink fullscreen hub (frame, tips, actions, `/` slash commands, status bar); Clack prompts
 - `gflows viz`: scrollback status panel — lifecycle, branches, recommended next step
-- `gflows init` / `start` / `finish` / `sync` / `pr`
+- `gflows init` / `start` / `finish` / `release` / `sync` / `pr`
+- `gflows release up patch -y -p` — quick ship from `dev` (bump + merge main + tag)
 - `gflows continue` / `undo` / `abort` — recovery after conflicts
 - `gflows doctor` / `info` / `config` / `status --json` / `mcp`
 

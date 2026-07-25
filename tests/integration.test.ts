@@ -259,7 +259,7 @@ describe("integration: completion", () => {
     expect(r.exitCode).toBe(0);
     expect(r.stdout).toContain("# Bash completion");
     expect(r.stdout).toContain("complete -F _gflows");
-    expect(r.stdout).toContain("init start finish sync pr");
+    expect(r.stdout).toContain("init start finish release sync pr");
     expect(r.stdout).toContain("doctor info config schema");
     expect(r.stdout).toContain("complete -F _gflows");
   });
@@ -405,5 +405,180 @@ describe("integration: empty branch list and non-TTY", () => {
     const r = await runGflows(dir, ["delete"]);
     expect(r.exitCode).toBe(1);
     expect(r.stderr).toMatch(/no branch name|not a TTY|Pass branch name/i);
+  });
+});
+
+const GIT_ENV = {
+  ...process.env,
+  GIT_AUTHOR_NAME: "Test",
+  GIT_AUTHOR_EMAIL: "test@test.local",
+  GIT_COMMITTER_NAME: "Test",
+  GIT_COMMITTER_EMAIL: "test@test.local",
+};
+
+async function gitCommitFile(dir: string, file: string, content: string, message: string) {
+  await writeFile(join(dir, file), content, "utf-8");
+  await Bun.spawn(["git", "add", file], { cwd: dir, env: GIT_ENV }).exited;
+  const c = Bun.spawn(["git", "commit", "-m", message], {
+    cwd: dir,
+    stdout: "pipe",
+    stderr: "pipe",
+    env: GIT_ENV,
+  });
+  await c.exited;
+  expect(c.exitCode).toBe(0);
+}
+
+describe("integration: quick release from dev", () => {
+  let dir: string;
+
+  afterEach(async () => {
+    if (dir) await rm(dir, { recursive: true }).catch(() => {});
+  });
+
+  test("release up patch merges main, tags, bumps package.json", async () => {
+    dir = await createTempRepo();
+    await runGflows(dir, ["init", "--no-push"]);
+    await Bun.spawn(["git", "checkout", "dev"], { cwd: dir, env: GIT_ENV }).exited;
+    await writeFile(
+      join(dir, "package.json"),
+      '{\n\t"name": "demo",\n\t"version": "1.0.0"\n}\n',
+      "utf-8",
+    );
+    await Bun.spawn(["git", "add", "package.json"], { cwd: dir, env: GIT_ENV }).exited;
+    await Bun.spawn(["git", "commit", "-m", "add package"], {
+      cwd: dir,
+      stdout: "pipe",
+      stderr: "pipe",
+      env: GIT_ENV,
+    }).exited;
+    await gitCommitFile(dir, "ship.txt", "ready", "work on dev");
+
+    const r = await runGflows(dir, ["release", "up", "patch", "-y", "-P"]);
+    expect(r.exitCode).toBe(0);
+    expect(r.stdout + r.stderr).toMatch(/finished|tag/i);
+
+    const pkg = await Bun.file(join(dir, "package.json")).text();
+    expect(pkg).toContain('"version": "1.0.1"');
+    expect(pkg).toContain("\t");
+
+    const tag = Bun.spawn(["git", "tag", "-l", "v1.0.1"], {
+      cwd: dir,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const tagOut = await new Response(tag.stdout).text();
+    await tag.exited;
+    expect(tagOut.trim()).toBe("v1.0.1");
+
+    const contains = Bun.spawn(["git", "branch", "--contains", "v1.0.1"], {
+      cwd: dir,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const containsOut = await new Response(contains.stdout).text();
+    await contains.exited;
+    expect(containsOut).toMatch(/main/);
+    expect(containsOut).toMatch(/dev/);
+  });
+
+  test("release on main → exit 2", async () => {
+    dir = await createTempRepo();
+    await runGflows(dir, ["init", "--no-push"]);
+    await writeFile(join(dir, "package.json"), '{"name":"x","version":"0.0.1"}\n', "utf-8");
+    await Bun.spawn(["git", "add", "package.json"], { cwd: dir, env: GIT_ENV }).exited;
+    await Bun.spawn(["git", "commit", "-m", "pkg"], {
+      cwd: dir,
+      env: GIT_ENV,
+      stdout: "pipe",
+      stderr: "pipe",
+    }).exited;
+    await Bun.spawn(["git", "checkout", "main"], { cwd: dir, env: GIT_ENV }).exited;
+    const r = await runGflows(dir, ["release", "up", "patch", "-y", "-P"]);
+    expect(r.exitCode).toBe(2);
+    expect(r.stderr).toMatch(/must be on 'dev'/i);
+  });
+
+  test("release when dev not ahead of main → exit 2", async () => {
+    dir = await createTempRepo();
+    await runGflows(dir, ["init", "--no-push"]);
+    await writeFile(join(dir, "package.json"), '{"name":"x","version":"0.0.1"}\n', "utf-8");
+    await Bun.spawn(["git", "add", "package.json"], { cwd: dir, env: GIT_ENV }).exited;
+    await Bun.spawn(["git", "commit", "-m", "pkg"], {
+      cwd: dir,
+      env: GIT_ENV,
+      stdout: "pipe",
+      stderr: "pipe",
+    }).exited;
+    // Commit is on main; sync to both by merging into dev if needed
+    await Bun.spawn(["git", "checkout", "dev"], { cwd: dir, env: GIT_ENV }).exited;
+    await Bun.spawn(["git", "merge", "main", "-m", "sync"], {
+      cwd: dir,
+      env: GIT_ENV,
+      stdout: "pipe",
+      stderr: "pipe",
+    }).exited;
+    const r = await runGflows(dir, ["release", "up", "patch", "-y", "-P"]);
+    expect(r.exitCode).toBe(2);
+    expect(r.stderr).toMatch(/nothing to release|no commits/i);
+  });
+
+  test("release when tag exists → exit 2", async () => {
+    dir = await createTempRepo();
+    await runGflows(dir, ["init", "--no-push"]);
+    await writeFile(join(dir, "package.json"), '{"name":"x","version":"1.0.0"}\n', "utf-8");
+    await Bun.spawn(["git", "add", "package.json"], { cwd: dir, env: GIT_ENV }).exited;
+    await Bun.spawn(["git", "commit", "-m", "pkg"], {
+      cwd: dir,
+      env: GIT_ENV,
+      stdout: "pipe",
+      stderr: "pipe",
+    }).exited;
+    await Bun.spawn(["git", "tag", "v1.0.1"], { cwd: dir, env: GIT_ENV }).exited;
+    await Bun.spawn(["git", "checkout", "dev"], { cwd: dir, env: GIT_ENV }).exited;
+    await Bun.spawn(["git", "merge", "main", "-m", "sync"], {
+      cwd: dir,
+      env: GIT_ENV,
+      stdout: "pipe",
+      stderr: "pipe",
+    }).exited;
+    await gitCommitFile(dir, "extra", "1", "ahead");
+    const r = await runGflows(dir, ["release", "up", "patch", "-y", "-P"]);
+    expect(r.exitCode).toBe(2);
+    expect(r.stderr).toMatch(/tag.*already exists/i);
+  });
+
+  test("release missing bump args (non-TTY) → exit 1", async () => {
+    dir = await createTempRepo();
+    await runGflows(dir, ["init", "--no-push"]);
+    await Bun.spawn(["git", "checkout", "dev"], { cwd: dir, env: GIT_ENV }).exited;
+    await gitCommitFile(dir, "a", "1", "ahead");
+    const r = await runGflows(dir, ["release", "-y", "-P"]);
+    expect(r.exitCode).toBe(1);
+    expect(r.stderr).toMatch(/bump type|up patch/i);
+  });
+
+  test("release missing push polarity (non-TTY) → exit 1", async () => {
+    dir = await createTempRepo();
+    await runGflows(dir, ["init", "--no-push"]);
+    await writeFile(join(dir, "package.json"), '{"name":"x","version":"0.0.1"}\n', "utf-8");
+    await Bun.spawn(["git", "add", "package.json"], { cwd: dir, env: GIT_ENV }).exited;
+    await Bun.spawn(["git", "commit", "-m", "pkg"], {
+      cwd: dir,
+      env: GIT_ENV,
+      stdout: "pipe",
+      stderr: "pipe",
+    }).exited;
+    await Bun.spawn(["git", "checkout", "dev"], { cwd: dir, env: GIT_ENV }).exited;
+    await Bun.spawn(["git", "merge", "main", "-m", "sync"], {
+      cwd: dir,
+      env: GIT_ENV,
+      stdout: "pipe",
+      stderr: "pipe",
+    }).exited;
+    await gitCommitFile(dir, "b", "2", "ahead");
+    const r = await runGflows(dir, ["release", "up", "patch", "-y"]);
+    expect(r.exitCode).toBe(1);
+    expect(r.stderr).toMatch(/--push|--no-push|-p|-P/i);
   });
 });

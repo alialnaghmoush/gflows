@@ -11,6 +11,7 @@ import {
   FinishFlow,
   InitFlow,
   ListFlow,
+  ReleaseFlow,
   StartFlow,
   SwitchFlow,
   SyncFlow,
@@ -31,6 +32,7 @@ type Screen =
   | { id: "home"; flash?: string }
   | { id: "start" }
   | { id: "finish" }
+  | { id: "release" }
   | { id: "sync" }
   | { id: "list" }
   | { id: "switch" }
@@ -86,6 +88,9 @@ export function HubShell({ cwd, onDone }: HubShellProps): React.ReactElement {
         return true;
       case "finish":
         setScreen({ id: "finish" });
+        return true;
+      case "release":
+        setScreen({ id: "release" });
         return true;
       case "sync":
         setScreen({ id: "sync" });
@@ -156,6 +161,14 @@ export function HubShell({ cwd, onDone }: HubShellProps): React.ReactElement {
       setScreen({ id: "finish" });
       return;
     }
+    if (cmd === "release") {
+      if (rest.length > 0) {
+        runArgv(["release", "-y", "-P", ...rest]);
+        return;
+      }
+      setScreen({ id: "release" });
+      return;
+    }
     if (cmd === "sync") {
       if (rest.length > 0) {
         runArgv(["sync", "--force", ...rest]);
@@ -216,6 +229,9 @@ export function HubShell({ cwd, onDone }: HubShellProps): React.ReactElement {
   }
   if (screen.id === "finish") {
     return <FinishFlow onCancel={cancelWizard} onDone={runArgv} />;
+  }
+  if (screen.id === "release") {
+    return <ReleaseFlow onCancel={cancelWizard} onDone={runArgv} />;
   }
   if (screen.id === "sync") {
     return <SyncFlow onCancel={cancelWizard} onDone={runArgv} />;

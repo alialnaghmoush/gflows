@@ -27,6 +27,7 @@ export type Command =
   | "init"
   | "start"
   | "finish"
+  | "release"
   | "switch"
   | "delete"
   | "list"
@@ -52,6 +53,7 @@ export const ALL_COMMANDS: Command[] = [
   "init",
   "start",
   "finish",
+  "release",
   "switch",
   "delete",
   "list",

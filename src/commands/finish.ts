@@ -37,6 +37,7 @@ import {
   tagExists,
 } from "../git.js";
 import { hint, success } from "../out.js";
+import { PACKAGE_JSON } from "../packages.js";
 import {
   completeRun,
   type GflowsRunState,
@@ -44,9 +45,11 @@ import {
   suspendRun,
   writeActiveRun,
 } from "../run-state.js";
-import type { BranchType, MergeTarget, ParsedArgs, ResolvedConfig } from "../types.js";
+import type { BranchType, MergeTarget, ParsedArgs } from "../types.js";
+import { applyVersionToPackages, JSR_JSON, sortedPackageRoots } from "../version-bump.js";
 
-interface FinishContext {
+/** Context persisted for finish / quick-release multi-step runs. */
+export interface FinishContext {
   branchToFinish: string;
   type: BranchType;
   version?: string;
@@ -63,6 +66,19 @@ interface FinishContext {
   main: string;
   dev: string;
   bumpOnFinish: boolean;
+}
+
+/** Options for {@link runFinishPlan}. */
+export interface FinishPlanOptions {
+  dryRun: boolean;
+  verbose: boolean;
+  quiet: boolean;
+  /** Plan header label (default: "gflows finish plan"). */
+  planLabel?: string;
+  /** When true, print plan and return without executing. */
+  preview?: boolean;
+  /** When false, skip printing the plan (caller already did). Default true. */
+  printPlan?: boolean;
 }
 
 /**
@@ -375,47 +391,9 @@ export async function run(args: ParsedArgs): Promise<void> {
     });
   }
 
-  const targetsDisplay = formatMergeTarget(mergeTarget, config);
-  const tagName =
-    meta.tagOnFinish && version && !args.noTag ? normalizeTagVersion(version) : undefined;
-
-  console.error("gflows finish plan:");
-  console.error(`  branch:  ${branchToFinish}`);
-  console.error(`  merge:   → ${targetsDisplay}`);
-  if (tagName) console.error(`  tag:     ${tagName}`);
-  console.error(`  delete:  ${shouldDelete ? "yes" : "no"}`);
-  console.error(`  push:    ${doPush ? "yes" : "no"}`);
-  if (args.squash) console.error("  squash:  yes");
-
-  if (args.preview) {
-    success("gflows: preview only (no changes).");
-    return;
-  }
-
   if (args.bumpOnFinish && (type === "release" || type === "hotfix") && version) {
-    await bumpAndCommit(repoRoot, version, args, config);
+    await bumpAndCommit(repoRoot, version, args);
   }
-
-  const steps =
-    mergeTarget === "dev"
-      ? [
-          { id: "merge-dev", label: `Merge into ${config.dev}` },
-          ...(shouldDelete ? [{ id: "delete", label: "Delete branch" }] : []),
-          ...(doPush ? [{ id: "push", label: "Push" }] : []),
-        ]
-      : [
-          { id: "merge-main", label: `Merge into ${config.main}` },
-          ...(tagName ? [{ id: "tag", label: `Tag ${tagName}` }] : []),
-          { id: "merge-main-into-dev", label: `Merge ${config.main} into ${config.dev}` },
-          ...(tagName ? [{ id: "changelog", label: "Update CHANGELOG" }] : []),
-          ...(shouldDelete ? [{ id: "delete", label: "Delete branch" }] : []),
-          ...(doPush ? [{ id: "push", label: "Push" }] : []),
-        ];
-
-  const branchSha = await resolveSha(repoRoot, branchToFinish, opts);
-  const mainSha = await resolveSha(repoRoot, config.main, opts);
-  const devSha = await resolveSha(repoRoot, config.dev, opts);
-  const prevBranch = await getCurrentBranch(repoRoot, opts);
 
   const ctx: FinishContext = {
     branchToFinish,
@@ -436,56 +414,117 @@ export async function run(args: ParsedArgs): Promise<void> {
     bumpOnFinish: args.bumpOnFinish,
   };
 
+  await runFinishPlan(repoRoot, ctx, {
+    ...opts,
+    preview: args.preview,
+    planLabel: "gflows finish plan",
+  });
+}
+
+/**
+ * Prints a finish-style plan and executes it via the shared step runner.
+ * Used by `finish` and quick `release` from dev.
+ */
+export async function runFinishPlan(
+  repoRoot: string,
+  ctx: FinishContext,
+  opts: FinishPlanOptions,
+): Promise<void> {
+  const tagName = ctx.version && !ctx.noTag ? normalizeTagVersion(ctx.version) : undefined;
+  const targetsDisplay = formatMergeTarget(ctx.mergeTarget, {
+    main: ctx.main,
+    dev: ctx.dev,
+    remote: ctx.remote,
+    prefixes: {
+      feature: "feature/",
+      bugfix: "bugfix/",
+      chore: "chore/",
+      release: "release/",
+      hotfix: "hotfix/",
+      spike: "spike/",
+    },
+  });
+
+  if (opts.printPlan !== false) {
+    console.error(`${opts.planLabel ?? "gflows finish plan"}:`);
+    console.error(`  branch:  ${ctx.branchToFinish}`);
+    console.error(`  merge:   → ${targetsDisplay}`);
+    if (tagName) console.error(`  tag:     ${tagName}`);
+    console.error(`  delete:  ${ctx.shouldDelete ? "yes" : "no"}`);
+    console.error(`  push:    ${ctx.doPush ? "yes" : "no"}`);
+    if (ctx.squash) console.error("  squash:  yes");
+  }
+
+  if (opts.preview) {
+    success("gflows: preview only (no changes).");
+    return;
+  }
+
+  const steps =
+    ctx.mergeTarget === "dev"
+      ? [
+          { id: "merge-dev", label: `Merge into ${ctx.dev}` },
+          ...(ctx.shouldDelete ? [{ id: "delete", label: "Delete branch" }] : []),
+          ...(ctx.doPush ? [{ id: "push", label: "Push" }] : []),
+        ]
+      : [
+          { id: "merge-main", label: `Merge into ${ctx.main}` },
+          ...(tagName ? [{ id: "tag", label: `Tag ${tagName}` }] : []),
+          { id: "merge-main-into-dev", label: `Merge ${ctx.main} into ${ctx.dev}` },
+          ...(tagName ? [{ id: "changelog", label: "Update CHANGELOG" }] : []),
+          ...(ctx.shouldDelete ? [{ id: "delete", label: "Delete branch" }] : []),
+          ...(ctx.doPush ? [{ id: "push", label: "Push" }] : []),
+        ];
+
+  const gitOpts = { dryRun: opts.dryRun, verbose: opts.verbose, quiet: opts.quiet };
+  const branchSha = await resolveSha(repoRoot, ctx.branchToFinish, gitOpts);
+  const mainSha = await resolveSha(repoRoot, ctx.main, gitOpts);
+  const devSha = await resolveSha(repoRoot, ctx.dev, gitOpts);
+  const prevBranch = await getCurrentBranch(repoRoot, gitOpts);
+
   const state = startRun(repoRoot, "finish", steps, ctx as unknown as Record<string, unknown>, {
     branchSha,
     mainSha,
     devSha,
     prevBranch,
     createdTag: tagName ?? null,
-    branchName: branchToFinish,
-    shouldDelete,
-    main: config.main,
-    dev: config.dev,
+    branchName: ctx.branchToFinish,
+    shouldDelete: ctx.shouldDelete,
+    main: ctx.main,
+    dev: ctx.dev,
   });
 
-  await executeFinishSteps(repoRoot, state, opts);
+  await executeFinishSteps(repoRoot, state, gitOpts);
 }
 
-async function bumpAndCommit(
-  repoRoot: string,
-  version: string,
-  args: ParsedArgs,
-  _config: ResolvedConfig,
-): Promise<void> {
+/**
+ * Bumps package versions (format-preserving) and commits on the current branch.
+ */
+async function bumpAndCommit(repoRoot: string, version: string, args: ParsedArgs): Promise<void> {
+  if (args.dryRun) return;
   const ver = version.replace(/^v/, "");
-  // Use bump command logic via spawning package files — light inline for finish --bump
-  const pkgPath = join(repoRoot, "package.json");
-  if (!existsSync(pkgPath)) return;
+  const roots = sortedPackageRoots(repoRoot);
+  if (roots.length === 0) return;
   try {
-    const pkg = JSON.parse(readFileSync(pkgPath, "utf-8")) as { version?: string };
-    pkg.version = ver;
-    if (!args.dryRun) {
-      writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`, "utf-8");
-    }
-    const jsrPath = join(repoRoot, "jsr.json");
-    if (existsSync(jsrPath)) {
-      let jsrRaw = readFileSync(jsrPath, "utf-8");
-      jsrRaw = jsrRaw.replace(/"version"\s*:\s*"[^"]*"/, `"version": "${ver}"`);
-      if (!args.dryRun) writeFileSync(jsrPath, jsrRaw, "utf-8");
-    }
-    if (!args.dryRun) {
-      await runGit(["add", "package.json", "jsr.json"], {
+    applyVersionToPackages(repoRoot, roots, ver);
+    for (const dir of roots) {
+      await runGit(["add", "--", join(dir, PACKAGE_JSON)], {
         cwd: repoRoot,
-        dryRun: args.dryRun,
+        dryRun: false,
         verbose: args.verbose,
-      });
-      await runGit(["commit", "-m", `chore: bump to ${ver}`], {
+      }).catch(() => undefined);
+      await runGit(["add", "--", join(dir, JSR_JSON)], {
         cwd: repoRoot,
-        dryRun: args.dryRun,
+        dryRun: false,
         verbose: args.verbose,
-      });
-      if (!args.quiet) success(`gflows: bumped version to ${ver} and committed.`);
+      }).catch(() => undefined);
     }
+    await runGit(["commit", "-m", `chore: bump to ${ver}`], {
+      cwd: repoRoot,
+      dryRun: false,
+      verbose: args.verbose,
+    });
+    if (!args.quiet) success(`gflows: bumped version to ${ver} and committed.`);
   } catch {
     hint("finish --bump: could not bump/commit version files; continuing finish.");
   }

@@ -82,6 +82,11 @@ function buildLegacyOptions(
     { value: "sync", label: "Sync this branch with base" },
     { value: "pr", label: "Open a pull request" },
     { value: "finish", label: "Finish / merge this branch" },
+  );
+  if (snap?.current === snap?.dev) {
+    items.push({ value: "release", label: "Quick release to main" });
+  }
+  items.push(
     { value: "switch", label: "Switch branch" },
     { value: "list", label: "List branches" },
     { value: "viz", label: "Refresh map" },
@@ -119,6 +124,19 @@ async function runHubAction(cwd: string, action: string): Promise<void> {
   if (action === "finish") {
     const push = await confirmPrompt({ message: "Push after finish?", initialValue: false });
     await dispatch(cwd, ["finish", "-y", push ? "-p" : "-P"]);
+    return;
+  }
+  if (action === "release") {
+    const bumpType = await selectPrompt<"patch" | "minor" | "major">({
+      message: "Bump version",
+      options: [
+        { label: "patch (x.y.Z)", value: "patch" },
+        { label: "minor (x.Y.0)", value: "minor" },
+        { label: "major (X.0.0)", value: "major" },
+      ],
+    });
+    const push = await confirmPrompt({ message: "Push after release?", initialValue: false });
+    await dispatch(cwd, ["release", "up", bumpType, "-y", push ? "-p" : "-P"]);
     return;
   }
   if (action === "sync") {

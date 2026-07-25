@@ -234,7 +234,7 @@ function resolveName(
     if (shell === "bash" || shell === "zsh" || shell === "fish") return shell;
     return undefined;
   }
-  if (command === "bump") {
+  if (command === "bump" || command === "release") {
     const dir = positionals[skip];
     if (dir === "up" || dir === "down") return dir;
     return undefined;
@@ -249,8 +249,8 @@ function resolveBump(positionals: string[]): {
   direction?: "up" | "down";
   type?: "patch" | "minor" | "major";
 } {
-  // Skip leading "bump" when present; with -U, positionals start at up/down
-  const skip = positionals[0] === "bump" ? 1 : 0;
+  // Skip leading command when present; with -U, positionals start at up/down
+  const skip = positionals[0] === "bump" || positionals[0] === "release" ? 1 : 0;
   const a = positionals[skip];
   const b = positionals[skip + 1];
   const direction = a === "up" || a === "down" ? a : undefined;
@@ -337,7 +337,9 @@ export function parse(
   const type = resolveType(command, positionals, v);
   const name = resolveName(command, positionals, v);
   const { direction: bumpDirection, type: bumpType } =
-    command === "bump" ? resolveBump(positionals) : { direction: undefined, type: undefined };
+    command === "bump" || command === "release"
+      ? resolveBump(positionals)
+      : { direction: undefined, type: undefined };
   const configArgs = command === "config" ? resolveConfigArgs(positionals) : {};
 
   const branchNames =

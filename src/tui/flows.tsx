@@ -125,6 +125,53 @@ export function FinishFlow({
 }
 
 /**
+ * Collects argv for `gflows release …` (quick release from dev) inside Ink.
+ */
+export function ReleaseFlow({
+  onDone,
+  onCancel,
+}: {
+  onDone: (argv: string[]) => void;
+  onCancel: () => void;
+}): React.ReactElement {
+  const [step, setStep] = useState<"type" | "push">("type");
+  const [bumpType, setBumpType] = useState<"patch" | "minor" | "major">("patch");
+
+  if (step === "type") {
+    return (
+      <WizardFrame title="Quick release from dev">
+        <InkSelect<"patch" | "minor" | "major">
+          message="Bump version"
+          options={[
+            { value: "patch", label: "patch (x.y.Z)" },
+            { value: "minor", label: "minor (x.Y.0)" },
+            { value: "major", label: "major (X.0.0)" },
+          ]}
+          onCancel={onCancel}
+          onSubmit={(t) => {
+            setBumpType(t);
+            setStep("push");
+          }}
+        />
+      </WizardFrame>
+    );
+  }
+
+  return (
+    <WizardFrame title={`Release · up ${bumpType}`}>
+      <InkConfirm
+        message="Push after release?"
+        initialValue={false}
+        onCancel={onCancel}
+        onSubmit={(push) => {
+          onDone(["release", "up", bumpType, "-y", push ? "-p" : "-P"]);
+        }}
+      />
+    </WizardFrame>
+  );
+}
+
+/**
  * Collects argv for `gflows sync …` entirely inside Ink.
  */
 export function SyncFlow({
