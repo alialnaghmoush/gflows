@@ -130,7 +130,7 @@ main  ←  release / hotfix only          (production)
 | **dev**                              | Integration (created by `init` from main)                   |
 | **feature / bugfix / chore / spike** | Day-to-day work → merge to **dev**                          |
 | **release / hotfix**                 | Versioned (`vX.Y.Z`) → **main**, then **main → dev**, + tag |
-| **quick release** (`gflows release`) | From **dev** only: bump → **main** → tag → sync **dev**     |
+| **quick release** (`gflows release`) | From **dev** only: bump or keep → **main** → tag → sync **dev** |
 
 
 **Lifecycle:** `init` → `start` → commit → (`sync`) → (`pr`) → `finish`
@@ -217,11 +217,13 @@ Hub: `g` → select the action. Typed short form assumes `alias g=gflows`.
 | `gflows start release v1.4.0` | `g -S -r v1.4.0` |
 | `gflows finish release -y -p` | `g -F -r -y -p` |
 
-**Quick release from `dev`** — bump, merge **main**, tag, sync **main → dev** (no `release/*` branch)
+**Quick release from `dev`** — merge **main**, tag, sync **main → dev** (no `release/*` branch). Choose a bump, or keep a version you already set manually.
 
 | Long | Short |
 |------|-------|
-| `gflows release up patch -y -p` | — |
+| `gflows release up patch -y -p` | — (bump, then ship) |
+| `gflows release up minor -y -p` | — |
+| `gflows release current -y -p` | — (keep `package.json` version; no bump commit) |
 
 **Hotfix**
 
@@ -274,7 +276,7 @@ Bare `gflows` / `g` in a **TTY** opens the Ink hub (see [Way 1](#way-1--hub-reco
 | `init` `-I`                   | Ensure main; create dev                     |
 | `start` `-S`                  | Create typed branch                         |
 | `finish` `-F`                 | Merge + close (plan; delete default **on**) |
-| `release`                     | Quick release from `dev` (bump + main + tag)|
+| `release`                     | Quick release from `dev` (bump/keep + main + tag)|
 | `sync`                        | Update branch from its base                 |
 | `pr`                          | Open PR/MR (`gh` / `glab`)                  |
 | `switch` `-W`                 | Switch branch                               |

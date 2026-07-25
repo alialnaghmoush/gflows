@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-07-25
+
+### Added
+
+- Quick release can keep the package version already on disk: `gflows release current -y -p` (or choose **keep current** in the hub / interactive prompt)
+- MCP `gflows_release` accepts `keepCurrent: true` as an alternative to `bumpType`
+
 ## [1.2.0] - 2026-07-25
 
 ### Added

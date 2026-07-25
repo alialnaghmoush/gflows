@@ -135,8 +135,8 @@ _gflows() {
       ;;
     release)
       if (( cword == cmd_idx + 1 )); then
-        COMPREPLY=($(compgen -W "up" -- "$cur"))
-      elif (( cword == cmd_idx + 2 )); then
+        COMPREPLY=($(compgen -W "up current" -- "$cur"))
+      elif (( cword == cmd_idx + 2 )) && [[ "${D}words[cmd_idx + 1]}" == "up" ]]; then
         COMPREPLY=($(compgen -W "${BUMP_TYPES.join(" ")}" -- "$cur"))
       else
         COMPREPLY=()
@@ -226,7 +226,7 @@ _gflows() {
           if [[ "${D}words[CURRENT-1]}" == "up" ]]; then
             _values "bump-type" ${BUMP_TYPES.map((t) => `"${t}"`).join(" ")}
           else
-            _values "direction" "up"
+            _values "mode" "up" "current"
           fi
           ;;
       esac
@@ -334,9 +334,11 @@ complete -c gflows -f -n "__fish_seen_subcommand_from bump; and not __fish_seen_
 complete -c gflows -f -n "__fish_seen_subcommand_from bump; and __fish_seen_subcommand_from up down" \\
   -a "patch minor major"
 
-# release up [patch|minor|major]
-complete -c gflows -f -n "__fish_seen_subcommand_from release; and not __fish_seen_subcommand_from up" \\
-  -a "up"
+# release up [patch|minor|major] | current
+complete -c gflows -f -n "__fish_seen_subcommand_from release; and not __fish_seen_subcommand_from up current" \\
+  -a "up" -d "Bump then release"
+complete -c gflows -f -n "__fish_seen_subcommand_from release; and not __fish_seen_subcommand_from up current" \\
+  -a "current" -d "Keep current version (no bump)"
 complete -c gflows -f -n "__fish_seen_subcommand_from release; and __fish_seen_subcommand_from up" \\
   -a "patch minor major"
 

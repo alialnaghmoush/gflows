@@ -134,6 +134,11 @@ export interface ParsedArgs {
   bumpDirection?: BumpDirection;
   /** Bump type (patch | minor | major). */
   bumpType?: BumpType;
+  /**
+   * Quick release: tag the package version already on disk (no bump commit).
+   * From `gflows release current`.
+   */
+  keepCurrent?: boolean;
   /** Config get/set action. */
   configAction?: ConfigAction;
   /** Config key (main, dev, remote, or prefixes.<type>). */

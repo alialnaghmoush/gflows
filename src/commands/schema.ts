@@ -57,7 +57,7 @@ export async function run(_args: ParsedArgs): Promise<void> {
         "-m/--message",
       ],
       release: [
-        "up patch|minor|major",
+        "up patch|minor|major | current",
         "-y",
         "-p/--push",
         "-P/--no-push",
@@ -74,7 +74,7 @@ export async function run(_args: ParsedArgs): Promise<void> {
     agentNotes: [
       "Always pass explicit flags in non-TTY (never assume interactive hub).",
       "Prefer -y to accept finish plan (delete defaults on); pass -P or -p for push.",
-      "Quick release from dev: gflows release up patch -y -p (or -P).",
+      "Quick release from dev: gflows release up patch -y -p (or -P); or gflows release current -y -p after a manual bump.",
       "On conflict: gflows continue | gflows abort | gflows undo.",
       "Use gflows schema and AGENTS.md as source of truth.",
     ],
@@ -87,7 +87,10 @@ function commandMeta(command: string): { summary: string; interactiveOk: boolean
     init: { summary: "Ensure main; create dev", interactiveOk: true },
     start: { summary: "Create workflow branch", interactiveOk: true },
     finish: { summary: "Merge and close workflow branch", interactiveOk: true },
-    release: { summary: "Quick release from dev (bump, merge main, tag)", interactiveOk: true },
+    release: {
+      summary: "Quick release from dev (bump or keep version, merge main, tag)",
+      interactiveOk: true,
+    },
     switch: { summary: "Switch workflow branch", interactiveOk: true },
     delete: { summary: "Delete local workflow branches", interactiveOk: true },
     list: { summary: "List workflow branches", interactiveOk: false },

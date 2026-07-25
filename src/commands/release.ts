@@ -1,5 +1,5 @@
 /**
- * Quick release from the long-lived `dev` branch: bump, merge into main, tag, sync main→dev.
+ * Quick release from the long-lived `dev` branch: bump (or keep), merge into main, tag, sync main→dev.
  * @module commands/release
  */
 
@@ -21,8 +21,17 @@ import {
 import { hint, success } from "../out.js";
 import { PACKAGE_JSON } from "../packages.js";
 import type { BumpType, ParsedArgs } from "../types.js";
-import { applyVersionToPackages, computeBump, JSR_JSON } from "../version-bump.js";
+import {
+  applyVersionToPackages,
+  computeBump,
+  JSR_JSON,
+  readPackageVersion,
+  sortedPackageRoots,
+} from "../version-bump.js";
 import { type FinishContext, runFinishPlan } from "./finish.js";
+
+/** Interactive choice: keep package version as-is, or bump a semver segment. */
+type ReleaseVersionChoice = "current" | BumpType;
 
 /**
  * Runs quick release: only valid when HEAD is the configured `dev` branch.
@@ -66,24 +75,30 @@ export async function run(args: ParsedArgs): Promise<void> {
     );
   }
 
+  let keepCurrent = args.keepCurrent === true;
   let bumpType: BumpType | undefined = args.bumpType;
+
   if (args.bumpDirection === "down") {
     console.error(
-      "gflows release: only 'up' is supported (not 'down'). Example: gflows release up patch",
+      "gflows release: only 'up' or 'current' is supported (not 'down'). Example: gflows release up patch",
     );
     process.exit(EXIT_USER);
   }
   if (args.bumpDirection && args.bumpDirection !== "up") {
     console.error(
-      "gflows release: expected 'up <patch|minor|major>'. Example: gflows release up patch",
+      "gflows release: expected 'up <patch|minor|major>' or 'current'. Example: gflows release up patch",
     );
     process.exit(EXIT_USER);
   }
+  if (keepCurrent && (args.bumpDirection || bumpType)) {
+    console.error("gflows release: use either 'current' or 'up <patch|minor|major>', not both.");
+    process.exit(EXIT_USER);
+  }
 
-  if (!bumpType) {
+  if (!keepCurrent && !bumpType) {
     if (!isTTY) {
       console.error(
-        "gflows release: when not in a TTY, bump type is required. Example: gflows release up patch -y -P",
+        "gflows release: when not in a TTY, specify version mode. Examples: gflows release current -y -P  or  gflows release up patch -y -P",
       );
       process.exit(EXIT_USER);
     }
@@ -96,14 +111,32 @@ export async function run(args: ParsedArgs): Promise<void> {
       }
     })();
     const currentVer = computedPreview?.oldVersion ?? "?";
-    bumpType = await selectPrompt<"patch" | "minor" | "major">({
-      message: `Bump version (current ${currentVer})`,
-      options: [
-        { label: "patch (x.y.Z)", value: "patch" },
-        { label: "minor (x.Y.0)", value: "minor" },
-        { label: "major (X.0.0)", value: "major" },
-      ],
-    });
+    // `release up` already chose bumping — only ask which segment.
+    if (args.bumpDirection === "up") {
+      bumpType = await selectPrompt<BumpType>({
+        message: `Bump version (current ${currentVer})`,
+        options: [
+          { label: "patch (x.y.Z)", value: "patch" },
+          { label: "minor (x.Y.0)", value: "minor" },
+          { label: "major (X.0.0)", value: "major" },
+        ],
+      });
+    } else {
+      const choice = await selectPrompt<ReleaseVersionChoice>({
+        message: `Version for release (current ${currentVer})`,
+        options: [
+          { label: `keep current (${currentVer})`, value: "current" },
+          { label: "bump patch (x.y.Z)", value: "patch" },
+          { label: "bump minor (x.Y.0)", value: "minor" },
+          { label: "bump major (X.0.0)", value: "major" },
+        ],
+      });
+      if (choice === "current") {
+        keepCurrent = true;
+      } else {
+        bumpType = choice;
+      }
+    }
   }
 
   let doPush = false;
@@ -123,18 +156,56 @@ export async function run(args: ParsedArgs): Promise<void> {
     doPush = false;
   }
 
-  const { oldVersion, newVersion, roots } = computeBump(repoRoot, "up", bumpType);
+  let oldVersion: string;
+  let newVersion: string;
+  let roots: string[];
+
+  if (keepCurrent) {
+    roots = sortedPackageRoots(repoRoot);
+    if (roots.length === 0) {
+      console.error(
+        `gflows release: no package.json found under ${repoRoot}. Run from project root or use -C <dir>.`,
+      );
+      process.exit(EXIT_USER);
+    }
+    const primaryRoot = roots[0];
+    if (primaryRoot === undefined) {
+      console.error(
+        `gflows release: no package.json found under ${repoRoot}. Run from project root or use -C <dir>.`,
+      );
+      process.exit(EXIT_USER);
+    }
+    oldVersion = readPackageVersion(primaryRoot).raw;
+    newVersion = oldVersion;
+  } else {
+    if (!bumpType) {
+      console.error(
+        "gflows release: expected 'up <patch|minor|major>' or 'current'. Example: gflows release up patch",
+      );
+      process.exit(EXIT_USER);
+    }
+    ({ oldVersion, newVersion, roots } = computeBump(repoRoot, "up", bumpType));
+  }
+
   const tagName = normalizeTagVersion(newVersion);
 
   if (await tagExists(repoRoot, tagName, opts)) {
     console.error(`gflows release: tag '${tagName}' already exists.`);
-    hint("Use a different bump (minor/major), or delete the tag if you intend to recreate it.");
+    hint(
+      keepCurrent
+        ? "Bump the version first, or delete the tag if you intend to recreate it."
+        : "Use a different bump (minor/major), or delete the tag if you intend to recreate it.",
+    );
     process.exit(2);
   }
 
   console.error("gflows release plan:");
   console.error(`  from:    ${config.dev}`);
-  console.error(`  bump:    ${oldVersion} → ${newVersion}`);
+  if (keepCurrent) {
+    console.error(`  version: ${newVersion} (keep current, no bump)`);
+  } else {
+    console.error(`  bump:    ${oldVersion} → ${newVersion}`);
+  }
   console.error(`  merge:   → ${config.main}, then ${config.main} → ${config.dev}`);
   console.error(`  tag:     ${tagName}`);
   console.error(`  push:    ${doPush ? "yes" : "no"}`);
@@ -159,7 +230,7 @@ export async function run(args: ParsedArgs): Promise<void> {
     process.exit(EXIT_USER);
   }
 
-  if (!opts.dryRun) {
+  if (!keepCurrent && !opts.dryRun) {
     applyVersionToPackages(repoRoot, roots, newVersion);
     for (const dir of roots) {
       await runGit(["add", "--", join(dir, PACKAGE_JSON)], {

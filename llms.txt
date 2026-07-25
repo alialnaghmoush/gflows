@@ -14,6 +14,7 @@
 - `gflows viz`: scrollback status panel — lifecycle, branches, recommended next step
 - `gflows init` / `start` / `finish` / `release` / `sync` / `pr`
 - `gflows release up patch -y -p` — quick ship from `dev` (bump + merge main + tag)
+- `gflows release current -y -p` — same, but keep the package version already on disk (after a manual bump)
 - `gflows continue` / `undo` / `abort` — recovery after conflicts
 - `gflows doctor` / `info` / `config` / `status --json` / `mcp`
 

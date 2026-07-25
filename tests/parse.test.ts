@@ -78,6 +78,12 @@ describe("parse kebab-case flags", () => {
     expect(parse(["-U", "up", "minor"]).bumpDirection).toBe("up");
     expect(parse(["-U", "up", "minor"]).bumpType).toBe("minor");
     expect(parse(["bump", "down", "patch"]).bumpDirection).toBe("down");
+    expect(parse(["release", "up", "patch"]).command).toBe("release");
+    expect(parse(["release", "up", "patch"]).bumpDirection).toBe("up");
+    expect(parse(["release", "up", "patch"]).bumpType).toBe("patch");
+    expect(parse(["release", "up", "patch"]).keepCurrent).toBe(false);
+    expect(parse(["release", "current"]).keepCurrent).toBe(true);
+    expect(parse(["release", "current"]).bumpType).toBeUndefined();
     // finish --bump stays finish (not the bump command)
     expect(parse(["finish", "--bump", "-y", "-P"]).command).toBe("finish");
     expect(parse(["finish", "--bump", "-y", "-P"]).bumpOnFinish).toBe(true);

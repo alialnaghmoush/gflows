@@ -96,19 +96,22 @@ const TOOLS = [
   {
     name: "gflows_release",
     description:
-      "Quick release from dev: bump package version, merge into main, tag, sync main→dev. Requires bumpType.",
+      "Quick release from dev: optional bump (or keep current version), merge into main, tag, sync main→dev. Pass bumpType or keepCurrent.",
     inputSchema: {
       type: "object",
       properties: {
         path: { type: "string" },
         bumpType: {
           type: "string",
-          description: "Semver segment to bump: patch, minor, or major",
+          description: "Semver segment to bump: patch, minor, or major (omit when keepCurrent)",
+        },
+        keepCurrent: {
+          type: "boolean",
+          description: "Tag the package version already on disk (no bump commit)",
         },
         push: { type: "boolean" },
         preview: { type: "boolean" },
       },
-      required: ["bumpType"],
     },
   },
   {
@@ -178,8 +181,13 @@ async function runTool(
       else argv.push("-P");
       break;
     case "gflows_release": {
-      const bumpType = String(args.bumpType ?? "patch");
-      argv.push("release", "up", bumpType);
+      if (args.keepCurrent === true) {
+        argv.push("release", "current");
+      } else if (typeof args.bumpType === "string" && args.bumpType.trim() !== "") {
+        argv.push("release", "up", args.bumpType.trim());
+      } else {
+        throw new Error("gflows_release: pass bumpType (patch|minor|major) or keepCurrent: true");
+      }
       if (args.preview) argv.push("--preview");
       if (args.push) argv.push("-p");
       else argv.push("-P");

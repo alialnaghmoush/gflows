@@ -46,8 +46,9 @@ gflows start release v1.2.0
 # … changelog / commits …
 gflows finish release -y -p
 
-# Quick release from dev (bump + merge main + tag, no release/* branch)
-gflows release up patch -y -p   # or -P; must be on dev
+# Quick release from dev (bump or keep version + merge main + tag, no release/* branch)
+gflows release up patch -y -p      # or -P; must be on dev
+gflows release current -y -p       # after a manual bump; tags package version as-is
 
 # Stuck
 gflows doctor --json

@@ -19,7 +19,7 @@ Commands:
   init, -I       Ensure main, create dev (TTY: wizard; optional package.json script alias)
   start, -S      Create workflow branch (TTY: prompts if args missing)
   finish, -F     Merge and close branch (plan + delete by default)
-  release        Quick release from dev (bump + merge main + tag)
+  release        Quick release from dev (bump or keep version + merge main + tag)
   sync           Update current branch from its base
   pr             Open PR/MR via gh or glab (correct base)
   switch, -W     Switch branch (picker or name)
@@ -62,7 +62,7 @@ Init:   --script-alias <name>  Add package.json script (e.g. g → "gflows")
 Start:  --force         Allow dirty working tree
 Finish: --no-ff         Always create merge commit; -D/--delete, -N/--no-delete;
         --squash, --preview, --bump; -s/--sign, -T/--no-tag, -M/--tag-message, -m/--message
-Release: up <patch|minor|major>  (from dev only); -y -p|-P; --preview; -s/--sign
+Release: up <patch|minor|major> | current  (from dev only); -y -p|-P; --preview; -s/--sign
 Sync:   --rebase, --force
 List:   -r, --include-remote   Include remote-tracking branches
 Switch: --move | --restore | --clean | --destroy | --cancel

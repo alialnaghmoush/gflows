@@ -127,16 +127,21 @@ async function runHubAction(cwd: string, action: string): Promise<void> {
     return;
   }
   if (action === "release") {
-    const bumpType = await selectPrompt<"patch" | "minor" | "major">({
-      message: "Bump version",
+    const choice = await selectPrompt<"current" | "patch" | "minor" | "major">({
+      message: "Version for release",
       options: [
-        { label: "patch (x.y.Z)", value: "patch" },
-        { label: "minor (x.Y.0)", value: "minor" },
-        { label: "major (X.0.0)", value: "major" },
+        { label: "keep current", value: "current" },
+        { label: "bump patch (x.y.Z)", value: "patch" },
+        { label: "bump minor (x.Y.0)", value: "minor" },
+        { label: "bump major (X.0.0)", value: "major" },
       ],
     });
     const push = await confirmPrompt({ message: "Push after release?", initialValue: false });
-    await dispatch(cwd, ["release", "up", bumpType, "-y", push ? "-p" : "-P"]);
+    const releaseArgv =
+      choice === "current"
+        ? (["release", "current", "-y", push ? "-p" : "-P"] as string[])
+        : (["release", "up", choice, "-y", push ? "-p" : "-P"] as string[]);
+    await dispatch(cwd, releaseArgv);
     return;
   }
   if (action === "sync") {

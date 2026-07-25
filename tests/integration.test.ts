@@ -548,6 +548,49 @@ describe("integration: quick release from dev", () => {
     expect(r.stderr).toMatch(/tag.*already exists/i);
   });
 
+  test("release current keeps package version and tags it", async () => {
+    dir = await createTempRepo();
+    await runGflows(dir, ["init", "--no-push"]);
+    await Bun.spawn(["git", "checkout", "dev"], { cwd: dir, env: GIT_ENV }).exited;
+    await writeFile(
+      join(dir, "package.json"),
+      '{\n\t"name": "demo",\n\t"version": "2.3.4"\n}\n',
+      "utf-8",
+    );
+    await Bun.spawn(["git", "add", "package.json"], { cwd: dir, env: GIT_ENV }).exited;
+    await Bun.spawn(["git", "commit", "-m", "manual bump"], {
+      cwd: dir,
+      stdout: "pipe",
+      stderr: "pipe",
+      env: GIT_ENV,
+    }).exited;
+    await gitCommitFile(dir, "ship.txt", "ready", "work on dev");
+
+    const r = await runGflows(dir, ["release", "current", "-y", "-P"]);
+    expect(r.exitCode).toBe(0);
+
+    const pkg = await Bun.file(join(dir, "package.json")).text();
+    expect(pkg).toContain('"version": "2.3.4"');
+
+    const tag = Bun.spawn(["git", "tag", "-l", "v2.3.4"], {
+      cwd: dir,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const tagOut = await new Response(tag.stdout).text();
+    await tag.exited;
+    expect(tagOut.trim()).toBe("v2.3.4");
+
+    const log = Bun.spawn(["git", "log", "--oneline", "--grep", "chore: bump"], {
+      cwd: dir,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const logOut = await new Response(log.stdout).text();
+    await log.exited;
+    expect(logOut.trim()).toBe("");
+  });
+
   test("release missing bump args (non-TTY) → exit 1", async () => {
     dir = await createTempRepo();
     await runGflows(dir, ["init", "--no-push"]);
@@ -555,7 +598,7 @@ describe("integration: quick release from dev", () => {
     await gitCommitFile(dir, "a", "1", "ahead");
     const r = await runGflows(dir, ["release", "-y", "-P"]);
     expect(r.exitCode).toBe(1);
-    expect(r.stderr).toMatch(/bump type|up patch/i);
+    expect(r.stderr).toMatch(/version mode|up patch|current/i);
   });
 
   test("release missing push polarity (non-TTY) → exit 1", async () => {

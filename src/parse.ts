@@ -236,7 +236,9 @@ function resolveName(
   }
   if (command === "bump" || command === "release") {
     const dir = positionals[skip];
-    if (dir === "up" || dir === "down") return dir;
+    if (dir === "up" || dir === "down" || (command === "release" && dir === "current")) {
+      return dir;
+    }
     return undefined;
   }
   if (command === "switch" || command === "pr" || command === "sync") {
@@ -248,11 +250,15 @@ function resolveName(
 function resolveBump(positionals: string[]): {
   direction?: "up" | "down";
   type?: "patch" | "minor" | "major";
+  keepCurrent?: boolean;
 } {
   // Skip leading command when present; with -U, positionals start at up/down
   const skip = positionals[0] === "bump" || positionals[0] === "release" ? 1 : 0;
   const a = positionals[skip];
   const b = positionals[skip + 1];
+  if (positionals[0] === "release" && a === "current") {
+    return { keepCurrent: true };
+  }
   const direction = a === "up" || a === "down" ? a : undefined;
   const type = b === "patch" || b === "minor" || b === "major" ? b : undefined;
   return { direction, type };
@@ -297,6 +303,7 @@ function emptyArgs(cwd: string, pathStr: string | undefined): ParsedArgs {
     squash: false,
     preview: false,
     bumpOnFinish: false,
+    keepCurrent: false,
     includeRemote: false,
     json: false,
     rebase: false,
@@ -336,10 +343,13 @@ export function parse(
 
   const type = resolveType(command, positionals, v);
   const name = resolveName(command, positionals, v);
-  const { direction: bumpDirection, type: bumpType } =
+  const bumpResolved =
     command === "bump" || command === "release"
       ? resolveBump(positionals)
-      : { direction: undefined, type: undefined };
+      : { direction: undefined, type: undefined, keepCurrent: undefined };
+  const bumpDirection = bumpResolved.direction;
+  const bumpType = bumpResolved.type;
+  const keepCurrent = bumpResolved.keepCurrent === true;
   const configArgs = command === "config" ? resolveConfigArgs(positionals) : {};
 
   const branchNames =
@@ -395,6 +405,7 @@ export function parse(
     branchNames,
     bumpDirection,
     bumpType,
+    keepCurrent,
     configAction: configArgs.action,
     configKey: configArgs.key,
     configValue: configArgs.value,
